@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { AppTopNavigation } from '@/components/shell/AppTopNavigation';
 import { HelpPanelProvider, useHelpPanel } from '@/components/shell/HelpPanelContext';
+import { KeyboardShortcuts } from '@/components/shell/KeyboardShortcuts';
 import { navigationItems } from '@/components/shell/navigationItems';
 import { useIsCompact } from '@/lib/useMediaQuery';
 import { dismissNotification, useNotifications } from '@/lib/notifications';
@@ -100,6 +101,7 @@ function ConsoleFrame({ children }: { children: React.ReactNode }) {
         Skip to main content
       </a>
 
+      <KeyboardShortcuts onToggleTheme={toggleTheme} />
       <AppTopNavigation darkMode={darkMode} onToggleTheme={toggleTheme} />
 
       <AppLayout

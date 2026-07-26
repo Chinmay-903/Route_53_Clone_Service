@@ -79,6 +79,52 @@ export type ARecord = {
 };
 
 /**
+ * Body_import_zone_file
+ */
+export type BodyImportZoneFile = {
+  /**
+   * File
+   *
+   * A BIND master file.
+   */
+  file: Blob | File;
+};
+
+/**
+ * BulkDeleteRequest
+ *
+ * Body of the bulk record delete.
+ */
+export type BulkDeleteRequest = {
+  /**
+   * Record Ids
+   *
+   * Record identifiers to delete. Generated records are refused.
+   */
+  record_ids: Array<string>;
+};
+
+/**
+ * BulkDeleteResponse
+ *
+ * The outcome of a bulk delete.
+ */
+export type BulkDeleteResponse = {
+  /**
+   * Deleted
+   *
+   * Record sets removed.
+   */
+  deleted: number;
+  /**
+   * Refused
+   *
+   * Identifiers that were not removed, because they are generated system records or do not exist.
+   */
+  refused: Array<string>;
+};
+
+/**
  * CAARecord
  *
  * Certification authority authorization record.
@@ -249,6 +295,26 @@ export type HostedZoneUpdate = {
    * Comment
    */
   comment?: string | null;
+};
+
+/**
+ * ImportResponse
+ *
+ * The outcome of a zone-file import.
+ */
+export type ImportResponse = {
+  /**
+   * Created
+   *
+   * Record sets created.
+   */
+  created: number;
+  /**
+   * Skipped
+   *
+   * Records that were not created, each with a reason.
+   */
+  skipped: Array<SkippedLineResponse>;
 };
 
 /**
@@ -577,6 +643,32 @@ export type SrvRecord = {
    * Type
    */
   type: "SRV";
+};
+
+/**
+ * SkippedLineResponse
+ *
+ * One record the importer declined, and why.
+ */
+export type SkippedLineResponse = {
+  /**
+   * Line
+   *
+   * Source line number, or 0 for a whole-record rejection.
+   */
+  line: number;
+  /**
+   * Text
+   *
+   * The offending line, truncated.
+   */
+  text: string;
+  /**
+   * Reason
+   *
+   * Why it was skipped, safe to show the user.
+   */
+  reason: string;
 };
 
 /**
@@ -1105,6 +1197,52 @@ export type CreateRecordResponses = {
 export type CreateRecordResponse =
   CreateRecordResponses[keyof CreateRecordResponses];
 
+export type BulkDeleteRecordsData = {
+  body: BulkDeleteRequest;
+  headers?: {
+    /**
+     * X-Csrf-Token
+     */
+    "X-CSRF-Token"?: string | null;
+  };
+  path: {
+    /**
+     * Zone Id
+     */
+    zone_id: string;
+  };
+  query?: never;
+  url: "/api/v1/hosted-zones/{zone_id}/records/bulk-delete";
+};
+
+export type BulkDeleteRecordsErrors = {
+  /**
+   * No valid session cookie was presented.
+   */
+  401: ProblemDetail;
+  /**
+   * Not found, or owned by another user.
+   */
+  404: ProblemDetail;
+  /**
+   * Failed validation.
+   */
+  422: ProblemDetail;
+};
+
+export type BulkDeleteRecordsError =
+  BulkDeleteRecordsErrors[keyof BulkDeleteRecordsErrors];
+
+export type BulkDeleteRecordsResponses = {
+  /**
+   * Successful Response
+   */
+  200: BulkDeleteResponse;
+};
+
+export type BulkDeleteRecordsResponse =
+  BulkDeleteRecordsResponses[keyof BulkDeleteRecordsResponses];
+
 export type DeleteRecordData = {
   body?: never;
   headers?: {
@@ -1264,6 +1402,95 @@ export type ReplaceRecordResponses = {
 
 export type ReplaceRecordResponse =
   ReplaceRecordResponses[keyof ReplaceRecordResponses];
+
+export type ImportZoneFileData = {
+  body: BodyImportZoneFile;
+  headers?: {
+    /**
+     * X-Csrf-Token
+     */
+    "X-CSRF-Token"?: string | null;
+  };
+  path: {
+    /**
+     * Zone Id
+     */
+    zone_id: string;
+  };
+  query?: never;
+  url: "/api/v1/hosted-zones/{zone_id}/import";
+};
+
+export type ImportZoneFileErrors = {
+  /**
+   * No valid session cookie was presented.
+   */
+  401: ProblemDetail;
+  /**
+   * Not found, or owned by another user.
+   */
+  404: ProblemDetail;
+  /**
+   * Unreadable, oversized, or unsafe file.
+   */
+  422: ProblemDetail;
+};
+
+export type ImportZoneFileError =
+  ImportZoneFileErrors[keyof ImportZoneFileErrors];
+
+export type ImportZoneFileResponses = {
+  /**
+   * Successful Response
+   */
+  200: ImportResponse;
+};
+
+export type ImportZoneFileResponse =
+  ImportZoneFileResponses[keyof ImportZoneFileResponses];
+
+export type ExportZoneData = {
+  body?: never;
+  path: {
+    /**
+     * Zone Id
+     */
+    zone_id: string;
+  };
+  query?: {
+    /**
+     * Format
+     *
+     * Output format.
+     */
+    format?: "bind" | "json";
+  };
+  url: "/api/v1/hosted-zones/{zone_id}/export";
+};
+
+export type ExportZoneErrors = {
+  /**
+   * No valid session cookie was presented.
+   */
+  401: ProblemDetail;
+  /**
+   * Not found, or owned by another user.
+   */
+  404: ProblemDetail;
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type ExportZoneError = ExportZoneErrors[keyof ExportZoneErrors];
+
+export type ExportZoneResponses = {
+  /**
+   * The zone as a downloadable file.
+   */
+  200: unknown;
+};
 
 export type HealthzData = {
   body?: never;

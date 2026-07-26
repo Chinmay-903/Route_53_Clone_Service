@@ -59,6 +59,22 @@ The database creates and seeds itself on boot — three zones with a spread of r
 | **Shareable views** | Search, filter, sort, and page live in the URL — so a filtered table is a link, and the back button goes back to the filter. |
 | **Designed everywhere** | Dark mode, plus deliberate login, empty, loading, error, 404, and placeholder screens. |
 
+### Bonus features — all five implemented
+
+| | |
+|---|---|
+| **Dark mode** | Follows your system preference, remembers your override. |
+| **Import from BIND** | Upload an RFC 1035 master file. Handles `$ORIGIN`, `$TTL`, `@`, owner-name inheritance, the `IN` class, parenthesised multi-line records, and comments. Bad lines are skipped and reported with line numbers rather than failing the whole file. |
+| **Export as JSON or BIND** | Download any zone in either format, straight from the records table. |
+| **Keyboard shortcuts** | `?` for the full list · `g d` / `g h` / `g c` to navigate · `/` to focus search · `Shift+D` for dark mode. |
+| **Bulk operations** | Multi-select records and delete up to 100 at once. Generated SOA and NS records are refused and reported, so a mixed selection still removes the rest. |
+
+> **On import safety:** the parser **rejects `$INCLUDE`**, which would otherwise
+> read an arbitrary file off the server's disk. It also caps size (256 KB),
+> lines (5,000), and record sets (1,000), refuses non-UTF-8 payloads so archives
+> never reach it, and runs every parsed value through the same validators a
+> hand-typed record faces. Uploads are never written to disk.
+
 ---
 
 ## How it's built
@@ -162,6 +178,9 @@ Versioned under `/api/v1`. Errors are RFC 9457 Problem Details with a correlatio
 | `PATCH` | `/hosted-zones/{id}` | Description only — a zone's name is its identity |
 | `DELETE` | `/hosted-zones/{id}` | `409` while non-system records remain |
 | `GET` | `/hosted-zones/{id}/records` | `?search=&type=&sort=&limit=&offset=` |
+| `POST` | `/hosted-zones/{id}/records/bulk-delete` | Up to 100 at once; generated records refused and listed |
+| `POST` | `/hosted-zones/{id}/import` | Multipart BIND upload; `$INCLUDE` rejected with 422 |
+| `GET` | `/hosted-zones/{id}/export?format=bind\|json` | Downloads the zone as a file |
 | `POST` | `/hosted-zones/{id}/records` | Body discriminated on `type` · `409` on uniqueness or CNAME rules |
 | `PUT` | `/hosted-zones/{id}/records/{rid}` | `409` for generated records |
 | `DELETE` | `/hosted-zones/{id}/records/{rid}` | `409` for generated records |
@@ -189,7 +208,7 @@ cd frontend && npm run generate:api
 cd backend && .venv/Scripts/python -m pytest
 ```
 
-**87 tests, all passing.**
+**127 tests, all passing.**
 
 - **Unit** — every record type's validator, name normalisation (punycode, wildcards, label limits), TTL bounds. No database, no HTTP client.
 - **Integration** — a real temporary SQLite file, so WAL and the foreign-key pragma are genuinely exercised.
@@ -243,7 +262,6 @@ Written honestly — what was left out matters as much as what was built.
 - **No DNS resolution.** Records are stored and validated, never served. This is a console clone, not a name server.
 - **Routing policies are modelled, not evaluated.** The schema and UI carry `routing_policy` and `set_identifier` — and the uniqueness constraint depends on the latter — but nothing weights or fails over, because nothing resolves.
 - **Six console sections are placeholders.** Health checks, traffic flow, domains, resolver, applications, profiles. Each renders one designed page explaining what the real feature does and why it's out of scope.
-- **Zone-file import/export.** Import is the most dangerous input surface here — `$INCLUDE` is a local-file-read primitive, and the parser needs size, line, and timeout limits. Cut rather than shipped unhardened.
 - **No tags, no DNSSEC.** Both visible as tabs, both explain themselves.
 - **No audit log, caching layer, event bus, or FTS5.** Each considered and rejected as unearned at this scale.
 

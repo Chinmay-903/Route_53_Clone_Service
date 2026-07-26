@@ -2,8 +2,10 @@
 
 import Box from '@cloudscape-design/components/box';
 import Button from '@cloudscape-design/components/button';
+import ButtonDropdown from '@cloudscape-design/components/button-dropdown';
 import CollectionPreferences from '@cloudscape-design/components/collection-preferences';
 import Header from '@cloudscape-design/components/header';
+import Modal from '@cloudscape-design/components/modal';
 import Pagination from '@cloudscape-design/components/pagination';
 import Select from '@cloudscape-design/components/select';
 import SpaceBetween from '@cloudscape-design/components/space-between';
@@ -15,7 +17,9 @@ import { useState } from 'react';
 import { useIsCompact, useIsPhone } from '@/lib/useMediaQuery';
 
 import { DeleteRecordModal } from '@/components/records/DeleteRecordModal';
+import { ImportZoneFileModal } from '@/components/records/ImportZoneFileModal';
 import { RecordFormPanel } from '@/components/records/RecordFormPanel';
+import { downloadZoneExport, useBulkDeleteRecords } from '@/lib/queries/zone-files';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import type { HostedZoneResponse, RecordSetResponse } from '@/lib/api/types.gen';
@@ -59,8 +63,11 @@ export function RecordTable({ zone }: { zone: HostedZoneResponse }) {
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [selected, setSelected] = useState<RecordSetResponse[]>([]);
   const [deleting, setDeleting] = useState<RecordSetResponse | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [editing, setEditing] = useState<RecordSetResponse | null>(null);
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const bulkDelete = useBulkDeleteRecords(zone.id);
 
   const query = useRecords(zone.id, {
     search: state.search || undefined,
@@ -78,6 +85,12 @@ export function RecordTable({ zone }: { zone: HostedZoneResponse }) {
   // every write action against them is disabled.
   const selectionIsSystem = Boolean(selectedRecord?.is_system);
 
+  // Edit acts on exactly one record; delete accepts many. The real console
+  // behaves the same way — its Records tab is multi-select, its zone list is not.
+  const singleSelection = selected.length === 1;
+  const deletableSelection = selected.filter((record) => !record.is_system);
+  const isBulk = deletableSelection.length > 1;
+
   // Narrow the chosen columns rather than replacing them, so a column the user
   // switched off stays off when the viewport grows again.
   const visibleColumns = isPhone
@@ -93,7 +106,7 @@ export function RecordTable({ zone }: { zone: HostedZoneResponse }) {
         loading={query.isLoading}
         loadingText="Loading records"
         trackBy="id"
-        selectionType="single"
+        selectionType="multi"
         selectedItems={selected}
         onSelectionChange={({ detail }) => setSelected([...detail.selectedItems])}
         resizableColumns
@@ -166,7 +179,7 @@ export function RecordTable({ zone }: { zone: HostedZoneResponse }) {
                     disabled with the reason stated beneath the table rather
                     than failing on submit. */}
                 <Button
-                  disabled={!selectedRecord || selectionIsSystem}
+                  disabled={!singleSelection || selectionIsSystem}
                   onClick={() => selectedRecord && setEditing(selectedRecord)}
                   ariaLabel={
                     selectionIsSystem
@@ -177,16 +190,39 @@ export function RecordTable({ zone }: { zone: HostedZoneResponse }) {
                   Edit
                 </Button>
                 <Button
-                  disabled={!selectedRecord || selectionIsSystem}
-                  onClick={() => selectedRecord && setDeleting(selectedRecord)}
+                  disabled={deletableSelection.length === 0}
+                  onClick={() => {
+                    if (isBulk) setBulkDeleting(true);
+                    else setDeleting(deletableSelection[0] ?? null);
+                  }}
                   ariaLabel={
-                    selectionIsSystem
+                    selectionIsSystem && deletableSelection.length === 0
                       ? 'The zone’s generated SOA and NS records cannot be deleted'
-                      : 'Delete record'
+                      : 'Delete records'
                   }
                 >
-                  Delete
+                  {isBulk ? `Delete (${deletableSelection.length})` : 'Delete'}
                 </Button>
+                <ButtonDropdown
+                  ariaLabel="Import and export"
+                  items={[
+                    { id: 'import', text: 'Import from zone file' },
+                    { id: 'export-bind', text: 'Export as BIND' },
+                    { id: 'export-json', text: 'Export as JSON' },
+                  ]}
+                  onItemClick={({ detail }) => {
+                    if (detail.id === 'import') setImporting(true);
+                    else {
+                      void downloadZoneExport(
+                        zone.id,
+                        detail.id === 'export-json' ? 'json' : 'bind',
+                        zone.name,
+                      );
+                    }
+                  }}
+                >
+                  Actions
+                </ButtonDropdown>
                 <Button variant="primary" onClick={() => setCreating(true)}>
                   Create record
                 </Button>
@@ -324,6 +360,54 @@ export function RecordTable({ zone }: { zone: HostedZoneResponse }) {
         onClose={() => setDeleting(null)}
         onDeleted={() => setSelected([])}
       />
+
+      <ImportZoneFileModal
+        zoneId={zone.id}
+        zoneName={zone.name}
+        visible={importing}
+        onClose={() => setImporting(false)}
+      />
+
+      <Modal
+        visible={bulkDeleting}
+        onDismiss={() => setBulkDeleting(false)}
+        header={`Delete ${deletableSelection.length} records`}
+        closeAriaLabel="Close"
+        footer={
+          <Box float="right">
+            <SpaceBetween direction="horizontal" size="xs">
+              <Button
+                variant="link"
+                onClick={() => setBulkDeleting(false)}
+                disabled={bulkDelete.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                loading={bulkDelete.isPending}
+                onClick={async () => {
+                  await bulkDelete.mutateAsync(deletableSelection.map((r) => r.id));
+                  setSelected([]);
+                  setBulkDeleting(false);
+                }}
+              >
+                Delete
+              </Button>
+            </SpaceBetween>
+          </Box>
+        }
+      >
+        <SpaceBetween size="s">
+          <Box variant="span">
+            Permanently delete {deletableSelection.length} record sets? You cannot undo this
+            action.
+          </Box>
+          <Box variant="code" fontSize="body-s" color="text-status-inactive">
+            {deletableSelection.map((r) => `${r.name} ${r.type}`).join('\n')}
+          </Box>
+        </SpaceBetween>
+      </Modal>
 
       {/* Explains the disabled actions rather than leaving the user guessing. */}
       {selectionIsSystem && (

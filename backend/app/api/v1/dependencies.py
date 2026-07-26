@@ -31,6 +31,7 @@ from app.repositories.sqlalchemy.identity import (
 from app.services.auth_service import AuthService
 from app.services.hosted_zone_service import HostedZoneService
 from app.services.record_service import RecordService
+from app.services.zone_file_service import ZoneFileService
 
 SessionDep = Annotated[Session, Depends(get_session)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
@@ -63,9 +64,18 @@ def get_record_service(
     return RecordService(session, SqlAlchemyRecordSetRepository(session), zones)
 
 
+def get_zone_file_service(
+    session: SessionDep,
+    zones: Annotated[HostedZoneService, Depends(get_hosted_zone_service)],
+) -> ZoneFileService:
+    """Build the zone-file import/export service for this request."""
+    return ZoneFileService(session, SqlAlchemyRecordSetRepository(session), zones)
+
+
 AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
 HostedZoneServiceDep = Annotated[HostedZoneService, Depends(get_hosted_zone_service)]
 RecordServiceDep = Annotated[RecordService, Depends(get_record_service)]
+ZoneFileServiceDep = Annotated[ZoneFileService, Depends(get_zone_file_service)]
 
 
 def get_current_user(

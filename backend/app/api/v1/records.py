@@ -9,6 +9,7 @@ from app.models.dns import RecordSet
 from app.repositories.protocols import RecordSortField, SortOrder
 from app.schemas.common import ERROR_RESPONSES, MAX_PAGE_SIZE, Page, build_page
 from app.schemas.record import RecordSetResponse, RecordSetWrite
+from app.schemas.zone_file import BulkDeleteRequest, BulkDeleteResponse
 
 router = APIRouter(prefix="/hosted-zones/{zone_id}/records", tags=["Records"])
 
@@ -110,6 +111,29 @@ def create_record(
         set_identifier=payload.set_identifier,
     )
     return _to_response(record)
+
+
+@router.post(
+    "/bulk-delete",
+    response_model=BulkDeleteResponse,
+    summary="Delete several record sets",
+    description=(
+        "Removes up to 100 record sets in one transaction. Generated SOA and NS "
+        "records are refused and listed in the response, so a selection that "
+        "includes one still deletes the rest."
+    ),
+    responses={401: ERROR_RESPONSES[401], 404: ERROR_RESPONSES[404], 422: ERROR_RESPONSES[422]},
+    dependencies=[Depends(require_csrf_token)],
+)
+def bulk_delete_records(
+    zone_id: str,
+    payload: BulkDeleteRequest,
+    user: CurrentUser,
+    service: RecordServiceDep,
+) -> BulkDeleteResponse:
+    """Delete several record sets at once."""
+    deleted, refused = service.delete_records(zone_id, payload.record_ids, user.id)
+    return BulkDeleteResponse(deleted=deleted, refused=refused)
 
 
 @router.get(

@@ -49,6 +49,21 @@ _TITLES: dict[int, str] = {
 }
 
 
+def _status_for(error_type: type[DomainError]) -> tuple[int, str]:
+    """Resolve a domain exception to its status, following the class hierarchy.
+
+    Walks the MRO rather than looking up the exact type, so a more specific
+    exception inherits its parent's mapping. Without this, subclassing
+    `ValidationError` to mark a special case would silently downgrade it to a
+    generic 400.
+    """
+    for candidate in error_type.__mro__:
+        mapped = _DOMAIN_STATUS.get(candidate)
+        if mapped is not None:
+            return mapped
+    return status.HTTP_400_BAD_REQUEST, "bad-request"
+
+
 def problem_response(
     request: Request,
     status_code: int,
@@ -75,9 +90,7 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(DomainError)
     async def _handle_domain_error(request: Request, exc: DomainError) -> JSONResponse:
-        status_code, problem_type = _DOMAIN_STATUS.get(
-            type(exc), (status.HTTP_400_BAD_REQUEST, "bad-request")
-        )
+        status_code, problem_type = _status_for(type(exc))
         return problem_response(request, status_code, problem_type, exc.message)
 
     @app.exception_handler(RequestValidationError)

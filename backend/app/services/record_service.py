@@ -162,6 +162,32 @@ class RecordService:
         zone.record_count = self._records.count_for_zone(zone.id)
         self._session.commit()
 
+    def delete_records(
+        self, zone_public_id: str, record_ids: list[str], user_id: int
+    ) -> tuple[int, list[str]]:
+        """Delete several record sets in one transaction.
+
+        Returns the number deleted and the identifiers that were refused, so a
+        bulk selection containing a generated SOA or NS record removes the rest
+        rather than failing wholesale.
+        """
+        zone = self._zones.get_zone(zone_public_id, user_id)
+        refused: list[str] = []
+        deleted = 0
+
+        for record_id in record_ids:
+            record = self._records.get_by_public_id(record_id, zone.id)
+            if record is None or record.is_system:
+                refused.append(record_id)
+                continue
+            self._records.delete(record)
+            deleted += 1
+
+        self._session.flush()
+        zone.record_count = self._records.count_for_zone(zone.id)
+        self._session.commit()
+        return deleted, refused
+
     def _qualify(self, name: str, zone: HostedZone) -> str:
         """Resolve a console-style relative name against the zone.
 
