@@ -1,0 +1,47 @@
+# Fly.io deployment for the API.
+#
+# The volume is not optional. Fly machines have ephemeral root filesystems, so a
+# SQLite file written anywhere else is destroyed on every deploy, restart, and
+# scale-to-zero wake. `/data` is the mount point and DATABASE_URL points into it.
+#
+# Secrets are never in this file. Set them once with:
+#   fly secrets set SESSION_SECRET=... DEMO_USER_PASSWORD=... CORS_ORIGINS=...
+
+app = "route53-clone-api"
+primary_region = "sin"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  ENVIRONMENT = "production"
+  DATABASE_URL = "sqlite:////data/route53.db"
+  # The console is served from a different registrable domain, which makes every
+  # API call cross-site. A Lax cookie is not sent on those, so the session would
+  # be dropped after login. See app/core/config.py for the full reasoning.
+  COOKIE_SAMESITE = "none"
+
+[[mounts]]
+  source = "route53_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  # Scale-to-zero is safe because the database lives on the volume, not in the
+  # machine. min_machines_running = 0 keeps the demo inside the free allowance;
+  # raise it to 1 if the cold start is too visible.
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/healthz"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

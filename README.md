@@ -250,6 +250,8 @@ Each ADR records context, the decision, alternatives rejected, and the consequen
 | [ADR-0006](docs/adr/0006-generated-client.md) | A generated TypeScript client |
 | [ADR-0007](docs/adr/0007-sync-sqlalchemy.md) | Synchronous SQLAlchemy over aiosqlite |
 
+Deployment is documented separately in **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
+
 ---
 
 ## Known limitations
@@ -281,7 +283,7 @@ Written honestly — what was left out matters as much as what was built.
 <details>
 <summary><b>Not yet done</b></summary>
 
-- **Not deployed.** Runs locally, both halves verified end to end. Vercel + Fly.io remain — and Fly needs a persistent volume, since ephemeral filesystems destroy the SQLite file on every restart.
+- **Not yet deployed, but fully configured.** `backend/fly.toml` (with the mandatory volume) and `frontend/vercel.json` are committed, and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) walks through it. Running the commands needs your own Fly and Vercel accounts.
 - **No end-to-end or component tests.** Backend coverage is real (87 tests); Playwright and Vitest are scaffolded but unwritten.
 - **No Alembic migration committed.** The schema builds from SQLAlchemy metadata on first boot. Generate the first migration before any schema edit.
 

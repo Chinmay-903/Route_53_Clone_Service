@@ -52,7 +52,7 @@ def login(
         # cannot become a session theft.
         httponly=True,
         secure=settings.cookie_secure,
-        samesite="lax",
+        samesite=settings.cookie_samesite,
         path="/",
     )
     response.set_cookie(
@@ -63,7 +63,7 @@ def login(
         # which is precisely what a cross-origin page cannot do.
         httponly=False,
         secure=settings.cookie_secure,
-        samesite="lax",
+        samesite=settings.cookie_samesite,
         path="/",
     )
     return LoginResponse(user=UserResponse.model_validate(user), csrf_token=csrf_token)

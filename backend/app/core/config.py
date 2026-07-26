@@ -33,6 +33,18 @@ class Settings(BaseSettings):
 
     login_rate_limit: str = "5/minute"
 
+    # "lax" is correct when the browser talks to one origin — locally, or behind
+    # a proxy that puts the API and the console on the same site.
+    #
+    # A split deployment (console on vercel.app, API on fly.dev) is *cross-site*,
+    # and a Lax cookie is simply not sent on those requests: login would appear
+    # to succeed and every call after it would 401. "none" is the only value
+    # that works there, and it requires Secure, which `cookie_secure` enforces.
+    #
+    # SameSite is defence in depth here, not the CSRF control. The double-submit
+    # token in `security.py` is, and it keeps working under either setting.
+    cookie_samesite: Literal["lax", "none"] = "lax"
+
     @field_validator("cors_origins")
     @classmethod
     def reject_wildcard_origin(cls, value: str) -> str:
@@ -58,7 +70,7 @@ class Settings(BaseSettings):
         False in development only, because localhost is served over plain HTTP
         and a Secure cookie would never be sent back.
         """
-        return self.is_production
+        return self.is_production or self.cookie_samesite == "none"
 
 
 @lru_cache
