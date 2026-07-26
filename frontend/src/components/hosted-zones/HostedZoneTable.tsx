@@ -2,6 +2,7 @@
 
 import Box from '@cloudscape-design/components/box';
 import Button from '@cloudscape-design/components/button';
+import ButtonDropdown from '@cloudscape-design/components/button-dropdown';
 import CollectionPreferences from '@cloudscape-design/components/collection-preferences';
 import Header from '@cloudscape-design/components/header';
 import Link from '@cloudscape-design/components/link';
@@ -17,7 +18,18 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import type { HostedZoneResponse } from '@/lib/api/types.gen';
 import { useHostedZones } from '@/lib/queries/hosted-zones';
+import { useIsCompact, useIsPhone } from '@/lib/useMediaQuery';
 import { useTableState } from '@/lib/useTableState';
+
+/**
+ * Columns kept as the viewport narrows, in descending order of usefulness.
+ *
+ * A six-column table on a phone is a horizontal scrollbar with extra steps, so
+ * the ones that identify a zone survive and the rest drop. The user's own
+ * column choice stays in the URL and returns when the viewport widens.
+ */
+const PHONE_COLUMNS = ['name', 'record_count'];
+const TABLET_COLUMNS = ['name', 'type', 'record_count', 'id'];
 
 /**
  * The hosted zones list.
@@ -28,6 +40,8 @@ import { useTableState } from '@/lib/useTableState';
 export function HostedZoneTable() {
   const router = useRouter();
   const state = useTableState({ defaultSort: 'name' });
+  const isPhone = useIsPhone();
+  const isCompact = useIsCompact();
   const [selected, setSelected] = useState<HostedZoneResponse[]>([]);
   const [deleting, setDeleting] = useState<HostedZoneResponse | null>(null);
 
@@ -42,6 +56,14 @@ export function HostedZoneTable() {
   const zones = query.data?.items ?? [];
   const total = query.data?.total ?? 0;
   const selectedZone = selected[0];
+
+  // Narrow the chosen columns rather than replacing them, so a column the user
+  // switched off stays off when the viewport grows again.
+  const visibleColumns = isPhone
+    ? state.visibleColumns.filter((column) => PHONE_COLUMNS.includes(column))
+    : isCompact
+      ? state.visibleColumns.filter((column) => TABLET_COLUMNS.includes(column))
+      : state.visibleColumns;
 
   return (
     <>
@@ -101,7 +123,10 @@ export function HostedZoneTable() {
             cell: (zone) => <Box variant="code">{zone.id}</Box>,
           },
         ]}
-        visibleColumns={state.visibleColumns}
+        visibleColumns={visibleColumns}
+        // Keeps the zone name in view while the rest of a wide row scrolls
+        // sideways, so a horizontal scroll never loses the row's identity.
+        stickyColumns={{ first: isCompact ? 0 : 1 }}
         sortingColumn={{ sortingField: state.sort }}
         sortingDescending={state.order === 'desc'}
         onSortingChange={({ detail }) =>
@@ -117,18 +142,50 @@ export function HostedZoneTable() {
             description="A hosted zone holds the DNS records that define how traffic is routed for a domain."
             actions={
               <SpaceBetween direction="horizontal" size="xs">
-                <Button disabled={!selectedZone} onClick={() => router.push(`/hosted-zones/${selectedZone?.id}`)}>
-                  View details
-                </Button>
-                <Button
-                  disabled={!selectedZone}
-                  onClick={() => router.push(`/hosted-zones/${selectedZone?.id}?tab=details`)}
-                >
-                  Edit
-                </Button>
-                <Button disabled={!selectedZone} onClick={() => setDeleting(selectedZone ?? null)}>
-                  Delete
-                </Button>
+                {/* Four side-by-side buttons wrap into a ragged stack on a
+                    narrow screen, so the secondary three collapse into one
+                    overflow menu and only the primary action stays visible. */}
+                {isCompact ? (
+                  <ButtonDropdown
+                    disabled={!selectedZone}
+                    ariaLabel="Actions for the selected hosted zone"
+                    items={[
+                      { id: 'view', text: 'View details' },
+                      { id: 'edit', text: 'Edit' },
+                      { id: 'delete', text: 'Delete' },
+                    ]}
+                    onItemClick={({ detail }) => {
+                      if (!selectedZone) return;
+                      if (detail.id === 'delete') setDeleting(selectedZone);
+                      else if (detail.id === 'edit')
+                        router.push(`/hosted-zones/${selectedZone.id}?tab=details`);
+                      else router.push(`/hosted-zones/${selectedZone.id}`);
+                    }}
+                  >
+                    Actions
+                  </ButtonDropdown>
+                ) : (
+                  <>
+                    <Button
+                      disabled={!selectedZone}
+                      onClick={() => router.push(`/hosted-zones/${selectedZone?.id}`)}
+                    >
+                      View details
+                    </Button>
+                    <Button
+                      disabled={!selectedZone}
+                      onClick={() => router.push(`/hosted-zones/${selectedZone?.id}?tab=details`)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      disabled={!selectedZone}
+                      onClick={() => setDeleting(selectedZone ?? null)}
+                    >
+                      Delete
+                    </Button>
+                  </>
+                )}
                 <Button variant="primary" onClick={() => router.push('/hosted-zones/create')}>
                   Create hosted zone
                 </Button>

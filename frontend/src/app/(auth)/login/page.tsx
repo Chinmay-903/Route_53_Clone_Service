@@ -4,6 +4,7 @@ import Alert from '@cloudscape-design/components/alert';
 import Button from '@cloudscape-design/components/button';
 import FormField from '@cloudscape-design/components/form-field';
 import Input from '@cloudscape-design/components/input';
+import { CheckCircleIcon } from '@phosphor-icons/react/dist/csr/CheckCircle';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 
@@ -28,6 +29,8 @@ export default function LoginPage() {
     </Suspense>
   );
 }
+
+const CAPABILITIES = ['Nine record types', 'Server-side validation', 'Dark mode'];
 
 interface FieldErrors {
   email?: string;
@@ -77,20 +80,33 @@ function LoginScreen() {
   return (
     <main className={styles.page}>
       <section className={styles.brandPanel} aria-hidden="true">
-        <div className={styles.brandInner}>
-          <BrandMark size={56} />
+        <div className={`${styles.brandInner} stagger`}>
+          <BrandMark size={52} />
           <p className={styles.brandHeadline}>
             Hosted zones, records, and routing — in one console.
           </p>
           <p className={styles.brandBody}>
-            Create zones, manage all nine common record types, and see validation the
+            Create zones, manage every common record type, and see validation the
             moment it matters.
           </p>
+          <ul className={styles.brandPoints}>
+            {CAPABILITIES.map((capability) => (
+              <li key={capability} className={styles.brandPoint}>
+                <CheckCircleIcon size={14} weight="fill" />
+                {capability}
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
       <section className={styles.formPanel}>
-        <div className={styles.formInner}>
+        <div className={`${styles.formInner} animate-rise`}>
+          <div className={styles.compactBrand}>
+            <BrandMark size={28} />
+            Route 53
+          </div>
+
           <header className={styles.header}>
             <h1 className={styles.heading}>Sign in</h1>
             <p className={styles.subheading}>Access your hosted zones and DNS records.</p>
@@ -114,6 +130,7 @@ function LoginScreen() {
                   // a field is still being typed into is noise.
                   onBlur={() => setFieldErrors(collectErrors())}
                   type="email"
+                  inputMode="email"
                   autoComplete="username"
                   placeholder="you@example.com"
                   disabled={submitting}
@@ -121,6 +138,8 @@ function LoginScreen() {
               </FormField>
 
               <FormField label="Password" errorText={fieldErrors.password} stretch>
+                {/* Cloudscape's password input ships its own show/hide control,
+                    so there is no reason to hand-build one. */}
                 <Input
                   value={password}
                   onChange={({ detail }) => setPassword(detail.value)}
@@ -138,7 +157,13 @@ function LoginScreen() {
             </div>
           </form>
 
-          <DemoCredentials />
+          <DemoCredentials
+            onUse={() => {
+              setEmail('demo@route53clone.dev');
+              setPassword('DemoConsole2026');
+              setFieldErrors({});
+            }}
+          />
 
           <p className={styles.disclaimer}>
             An educational UI clone built for an assignment. Not affiliated with or
@@ -156,11 +181,19 @@ function LoginScreen() {
  * A public demo is useless behind credentials nobody has. The account is
  * low-privilege, sees only its own seeded data, and login is rate-limited.
  * Recorded as a conscious trade-off in docs/SECURITY.md.
+ *
+ * The fill button exists because retyping a password from screen text is the
+ * kind of small friction that makes a reviewer's first impression worse.
  */
-function DemoCredentials() {
+function DemoCredentials({ onUse }: { onUse: () => void }) {
   return (
     <div className={styles.demoBox}>
-      <p className={styles.demoTitle}>Demo account</p>
+      <div className={styles.demoHeader}>
+        <p className={styles.demoTitle}>Demo account</p>
+        <Button variant="inline-link" onClick={onUse}>
+          Use these
+        </Button>
+      </div>
       <dl className={styles.demoList}>
         <dt className={styles.demoTerm}>Email</dt>
         <dd className={styles.demoValue}>demo@route53clone.dev</dd>

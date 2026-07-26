@@ -11,15 +11,65 @@ import Input from '@cloudscape-design/components/input';
 import RadioGroup from '@cloudscape-design/components/radio-group';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import BreadcrumbGroup from '@cloudscape-design/components/breadcrumb-group';
+import HelpPanel from '@cloudscape-design/components/help-panel';
+import Link from '@cloudscape-design/components/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
+import { useHelpPanel } from '@/components/shell/HelpPanelContext';
 import { useCreateHostedZone } from '@/lib/queries/hosted-zones';
+
+/**
+ * Explanatory copy for the shell's Info panel.
+ *
+ * Written here in plain language rather than lifted from AWS documentation —
+ * reproducing their prose would be copying a protected asset, and a shorter
+ * explanation serves the reader better anyway.
+ */
+const HELP_CONTENT = (
+  <HelpPanel header={<h2>Hosted zones</h2>}>
+    <p>
+      A hosted zone is a container for the DNS records that decide how traffic
+      for one domain is routed. Its name is the domain it answers for.
+    </p>
+    <h3>Public or private</h3>
+    <p>
+      A <strong>public</strong> zone answers queries from anywhere on the
+      internet. A <strong>private</strong> zone answers only from inside networks
+      you associate with it — useful for internal service names that should not
+      resolve publicly.
+    </p>
+    <h3>What gets created with it</h3>
+    <p>
+      Every zone is created with two records that cannot be edited or deleted:
+      an <strong>NS</strong> record naming the four servers responsible for the
+      zone, and an <strong>SOA</strong> record holding its serial number and
+      cache timers. Removing either would leave the zone unresolvable.
+    </p>
+    <h3>Naming</h3>
+    <p>
+      Enter the domain without a protocol — <code>example.com</code>, not{' '}
+      <code>https://example.com</code>. Subdomains are managed as records inside
+      the zone rather than as zones of their own.
+    </p>
+  </HelpPanel>
+);
 
 /** The create hosted zone form. */
 export default function CreateHostedZonePage() {
   const router = useRouter();
   const mutation = useCreateHostedZone();
+  const helpPanel = useHelpPanel();
+
+  // Registers this page's help copy with the shell and clears it on the way
+  // out, so a later page does not inherit an Info button explaining zones.
+  useEffect(() => {
+    helpPanel.setContent(HELP_CONTENT);
+    return () => helpPanel.setContent(null);
+    // setContent is stable for the provider's lifetime; re-running on every
+    // render would clear the panel it had just set.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [name, setName] = useState('');
   const [comment, setComment] = useState('');
@@ -75,6 +125,11 @@ export default function CreateHostedZonePage() {
         <Header
           variant="h1"
           description="A hosted zone tells Route 53 how to respond to DNS queries for a domain."
+          info={
+            <Link variant="info" onFollow={() => helpPanel.setOpen(true)}>
+              Info
+            </Link>
+          }
         >
           Create hosted zone
         </Header>
@@ -152,22 +207,6 @@ export default function CreateHostedZonePage() {
               </SpaceBetween>
             </Container>
 
-            <Container header={<Header variant="h2">What happens next</Header>}>
-              <SpaceBetween size="s">
-                <Box variant="p">
-                  Two records are created with the zone and cannot be edited or deleted:
-                </Box>
-                <Box variant="p">
-                  <Box variant="strong">NS</Box> — the four name servers responsible for the
-                  zone, and <Box variant="strong">SOA</Box> — the zone&apos;s authority record,
-                  holding its serial number and cache timers.
-                </Box>
-                <Box variant="p" color="text-status-inactive">
-                  Removing either would leave the zone unresolvable, which is why the console
-                  disables their delete actions.
-                </Box>
-              </SpaceBetween>
-            </Container>
           </SpaceBetween>
         </Form>
       </form>

@@ -9,9 +9,16 @@ import Header from '@cloudscape-design/components/header';
 import Link from '@cloudscape-design/components/link';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import StatusIndicator from '@cloudscape-design/components/status-indicator';
+// Imported per-icon rather than from the package root: the root barrel pulls in
+// every glyph in the set, which is several megabytes before tree-shaking.
+import { GlobeIcon } from '@phosphor-icons/react/dist/csr/Globe';
+import { HeartbeatIcon } from '@phosphor-icons/react/dist/csr/Heartbeat';
+import { ListBulletsIcon } from '@phosphor-icons/react/dist/csr/ListBullets';
 import { useRouter } from 'next/navigation';
 
 import { useHostedZones } from '@/lib/queries/hosted-zones';
+
+import styles from './dashboard.module.css';
 
 /**
  * The dashboard.
@@ -35,53 +42,61 @@ export default function DashboardPage() {
         <Header
           variant="h1"
           description="Manage hosted zones and the DNS records inside them."
+          actions={
+            <Button variant="primary" onClick={() => router.push('/hosted-zones/create')}>
+              Create hosted zone
+            </Button>
+          }
         >
-          Route 53 dashboard
+          Dashboard
         </Header>
       }
     >
       <SpaceBetween size="l">
-        <Container header={<Header variant="h2">Your resources</Header>}>
-          <ColumnLayout columns={3} variant="text-grid">
-            <Metric label="Hosted zones" value={zoneCount} loading={query.isLoading} />
-            <Metric label="Record sets" value={recordCount} loading={query.isLoading} />
-            <div>
-              <Box variant="awsui-key-label">Health checks</Box>
-              <Box color="text-status-inactive">Not in this build</Box>
-            </div>
-          </ColumnLayout>
-        </Container>
+        <div className={styles.metricGrid}>
+          <Metric
+            label="Hosted zones"
+            value={zoneCount}
+            hint="Across this account"
+            loading={query.isLoading}
+            icon={<GlobeIcon size={22} weight="duotone" />}
+            onClick={() => router.push('/hosted-zones')}
+          />
+          <Metric
+            label="Record sets"
+            value={recordCount}
+            hint="Including generated SOA and NS"
+            loading={query.isLoading}
+            icon={<ListBulletsIcon size={22} weight="duotone" />}
+            onClick={() => router.push('/hosted-zones')}
+          />
+          <Metric
+            label="Health checks"
+            value={null}
+            hint="Not part of this build"
+            loading={false}
+            icon={<HeartbeatIcon size={22} weight="duotone" />}
+          />
+        </div>
 
         <Container
           header={
             <Header
               variant="h2"
               actions={
-                <Button variant="primary" onClick={() => router.push('/hosted-zones/create')}>
-                  Create hosted zone
-                </Button>
+                <Button onClick={() => router.push('/hosted-zones')}>View all</Button>
               }
             >
-              Get started
+              Your hosted zones
             </Header>
           }
         >
-          <SpaceBetween size="m">
-            <Box variant="p">
-              Create a hosted zone for a domain, then add the records that decide how its
-              traffic is routed. Every zone is created with an SOA record and an NS record
-              listing four name servers, both read-only.
-            </Box>
-            <Link
-              href="/hosted-zones"
-              onFollow={(event) => {
-                event.preventDefault();
-                router.push('/hosted-zones');
-              }}
-            >
-              View all hosted zones
-            </Link>
-          </SpaceBetween>
+          <ZoneSummary
+            zones={zones.slice(0, 5)}
+            loading={query.isLoading}
+            onOpen={(zoneId) => router.push(`/hosted-zones/${zoneId}`)}
+            onCreate={() => router.push('/hosted-zones/create')}
+          />
         </Container>
 
         <Container header={<Header variant="h2">Scope of this build</Header>}>
@@ -109,23 +124,124 @@ export default function DashboardPage() {
   );
 }
 
+/**
+ * One metric card.
+ *
+ * A `null` value means the metric does not exist in this build, which reads
+ * differently from zero and is shown as an em dash rather than a number.
+ */
 function Metric({
   label,
   value,
+  hint,
   loading,
+  icon,
+  onClick,
 }: {
   label: string;
-  value: number;
+  value: number | null;
+  hint: string;
   loading: boolean;
+  icon: React.ReactNode;
+  onClick?: () => void;
 }) {
+  const body = (
+    <>
+      <span className={styles.metricIcon} aria-hidden="true">
+        {icon}
+      </span>
+      <span className={styles.metricBody}>
+        <span className={styles.metricLabel}>{label}</span>
+        {loading ? (
+          <span className={styles.metricSkeleton} aria-hidden="true" />
+        ) : (
+          <p className={styles.metricValue}>{value ?? '—'}</p>
+        )}
+        <p className={styles.metricHint}>{hint}</p>
+      </span>
+    </>
+  );
+
+  if (!onClick) {
+    return (
+      <div className={styles.metric}>{body}</div>
+    );
+  }
+
   return (
-    <div>
-      <Box variant="awsui-key-label">{label}</Box>
-      <Box fontSize="display-l" fontWeight="bold">
-        {/* An em dash while loading reserves the same line height as a number,
-            so the card does not resize when the value arrives. */}
-        {loading ? '—' : value}
+    <button
+      type="button"
+      className={`${styles.metric} ${styles.metricInteractive}`}
+      onClick={onClick}
+      // A real button, so it is keyboard-reachable and announced as clickable
+      // without any ARIA patching.
+      aria-label={`${label}: ${loading ? 'loading' : (value ?? 'not available')}. View hosted zones.`}
+    >
+      {body}
+    </button>
+  );
+}
+
+/** The five most recent zones, or a prompt to create the first one. */
+function ZoneSummary({
+  zones,
+  loading,
+  onOpen,
+  onCreate,
+}: {
+  zones: { id: string; name: string; record_count: number; type: string }[];
+  loading: boolean;
+  onOpen: (zoneId: string) => void;
+  onCreate: () => void;
+}) {
+  if (loading) {
+    return (
+      <Box color="text-status-inactive" padding={{ vertical: 'm' }}>
+        Loading hosted zones…
       </Box>
-    </div>
+    );
+  }
+
+  if (zones.length === 0) {
+    return (
+      <SpaceBetween size="m">
+        <Box variant="p" color="text-body-secondary">
+          No hosted zones yet. Create one to start managing DNS records for a domain.
+        </Box>
+        <Button variant="primary" onClick={onCreate}>
+          Create hosted zone
+        </Button>
+      </SpaceBetween>
+    );
+  }
+
+  return (
+    <SpaceBetween size="xs">
+      {zones.map((zone) => (
+        <div
+          key={zone.id}
+          style={{
+            display: 'flex',
+            alignItems: 'baseline',
+            justifyContent: 'space-between',
+            gap: 'var(--space-m)',
+            flexWrap: 'wrap',
+          }}
+        >
+          <Link
+            href={`/hosted-zones/${zone.id}`}
+            onFollow={(event) => {
+              event.preventDefault();
+              onOpen(zone.id);
+            }}
+          >
+            {zone.name}
+          </Link>
+          <Box variant="small" color="text-status-inactive">
+            {zone.type} · {zone.record_count} records
+          </Box>
+        </div>
+      ))}
+    </SpaceBetween>
   );
 }

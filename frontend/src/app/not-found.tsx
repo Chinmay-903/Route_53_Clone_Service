@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { BrandLockup } from '@/components/ui/BrandMark';
+import { BrandMark } from '@/components/ui/BrandMark';
 
 /** The 404 page — designed, not a raw framework default. */
 export default function NotFound() {
@@ -10,21 +10,36 @@ export default function NotFound() {
         minHeight: '100dvh',
         display: 'grid',
         placeItems: 'center',
-        padding: 'var(--space-xl)',
+        padding: 'var(--space-xl) var(--space-l)',
       }}
     >
-      <div style={{ maxWidth: '46ch', textAlign: 'center' }}>
-        <div style={{ color: 'var(--text-strong)', marginBottom: 'var(--space-xl)' }}>
-          <BrandLockup />
+      <div className="animate-rise" style={{ maxWidth: '46ch', textAlign: 'center' }}>
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 'var(--space-xs)',
+            marginBottom: 'var(--space-2xl)',
+            color: 'var(--text-strong)',
+            fontFamily: 'var(--font-display), system-ui, sans-serif',
+            fontWeight: 700,
+            fontSize: 'var(--text-title)',
+            letterSpacing: '-0.015em',
+          }}
+        >
+          <BrandMark size={28} />
+          Route 53
         </div>
 
         <p
           style={{
             margin: 0,
-            fontSize: 'var(--font-size-display)',
-            fontWeight: 700,
-            letterSpacing: '-0.02em',
-            color: 'var(--text-strong)',
+            fontFamily: 'var(--font-display), system-ui, sans-serif',
+            fontSize: 'var(--text-display)',
+            fontWeight: 800,
+            letterSpacing: '-0.03em',
+            lineHeight: 1,
+            color: 'var(--accent)',
           }}
         >
           404
@@ -32,14 +47,23 @@ export default function NotFound() {
         <h1
           style={{
             margin: 'var(--space-s) 0 var(--space-m)',
-            fontSize: 'var(--font-size-heading)',
-            fontWeight: 600,
+            fontFamily: 'var(--font-display), system-ui, sans-serif',
+            fontSize: 'var(--text-heading)',
+            fontWeight: 700,
+            letterSpacing: '-0.02em',
             color: 'var(--text-strong)',
+            textWrap: 'balance',
           }}
         >
           That page does not exist
         </h1>
-        <p style={{ margin: '0 0 var(--space-xl)', lineHeight: 1.6, color: 'var(--text-muted)' }}>
+        <p
+          style={{
+            margin: '0 0 var(--space-2xl)',
+            lineHeight: 'var(--leading-normal)',
+            color: 'var(--text-muted)',
+          }}
+        >
           The address may be mistyped, or the resource may have been deleted.
         </p>
 
@@ -48,10 +72,11 @@ export default function NotFound() {
           style={{
             display: 'inline-block',
             padding: 'var(--space-s) var(--space-l)',
-            borderRadius: 'var(--radius)',
+            borderRadius: 'var(--radius-s)',
             background: 'var(--accent)',
             color: 'var(--accent-contrast)',
             fontWeight: 600,
+            fontSize: 'var(--text-body)',
             textDecoration: 'none',
           }}
         >

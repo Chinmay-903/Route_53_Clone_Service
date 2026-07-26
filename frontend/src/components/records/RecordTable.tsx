@@ -12,6 +12,8 @@ import Table from '@cloudscape-design/components/table';
 import TextFilter from '@cloudscape-design/components/text-filter';
 import { useState } from 'react';
 
+import { useIsCompact, useIsPhone } from '@/lib/useMediaQuery';
+
 import { DeleteRecordModal } from '@/components/records/DeleteRecordModal';
 import { RecordFormPanel } from '@/components/records/RecordFormPanel';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -36,12 +38,23 @@ const RECORD_COLUMNS = [
 
 const DEFAULT_RECORD_COLUMNS = ['name', 'type', 'routing_policy', 'values', 'ttl'];
 
+/**
+ * Columns kept as the viewport narrows, in descending order of usefulness.
+ *
+ * A record is identified by its name and type, and its value is the reason
+ * anyone opened the table — so those three survive on a phone.
+ */
+const PHONE_COLUMNS = ['name', 'type', 'values'];
+const TABLET_COLUMNS = ['name', 'type', 'values', 'ttl'];
+
 /** The records table for one hosted zone. */
 export function RecordTable({ zone }: { zone: HostedZoneResponse }) {
   const state = useTableState({
     defaultSort: 'name',
     defaultColumns: DEFAULT_RECORD_COLUMNS,
   });
+  const isPhone = useIsPhone();
+  const isCompact = useIsCompact();
 
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [selected, setSelected] = useState<RecordSetResponse[]>([]);
@@ -64,6 +77,14 @@ export function RecordTable({ zone }: { zone: HostedZoneResponse }) {
   // System records stay visible and selectable so their values can be read, but
   // every write action against them is disabled.
   const selectionIsSystem = Boolean(selectedRecord?.is_system);
+
+  // Narrow the chosen columns rather than replacing them, so a column the user
+  // switched off stays off when the viewport grows again.
+  const visibleColumns = isPhone
+    ? state.visibleColumns.filter((column) => PHONE_COLUMNS.includes(column))
+    : isCompact
+      ? state.visibleColumns.filter((column) => TABLET_COLUMNS.includes(column))
+      : state.visibleColumns;
 
   return (
     <>
@@ -127,7 +148,7 @@ export function RecordTable({ zone }: { zone: HostedZoneResponse }) {
           { id: 'evaluate_target_health', header: 'Evaluate target health', cell: () => dash() },
           { id: 'id', header: 'Record ID', cell: (record) => <Box variant="code">{record.id}</Box> },
         ]}
-        visibleColumns={state.visibleColumns}
+        visibleColumns={visibleColumns}
         sortingColumn={{ sortingField: state.sort }}
         sortingDescending={state.order === 'desc'}
         onSortingChange={({ detail }) =>
@@ -176,7 +197,9 @@ export function RecordTable({ zone }: { zone: HostedZoneResponse }) {
           </Header>
         }
         filter={
-          <SpaceBetween direction="horizontal" size="xs">
+          // Stacks the search box above the type filter on a narrow screen
+          // instead of squeezing both onto one line.
+          <SpaceBetween direction={isPhone ? 'vertical' : 'horizontal'} size="xs">
             <TextFilter
               filteringText={state.search}
               filteringPlaceholder="Find records"

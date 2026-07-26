@@ -1,70 +1,120 @@
 /*
  * Design tokens for the surfaces Cloudscape does not own: the login screen,
- * the Coming Soon placeholders, empty states, and error states.
+ * the Coming Soon placeholders, empty states, error states, and the 404.
  *
- * These deliberately follow Cloudscape's own dark-mode switch rather than
- * defining an independent palette. `applyMode` puts `.awsui-dark-mode` on the
- * root element, so one class toggles both the console chrome and everything
- * here — the login screen cannot drift out of step with the console it leads
- * into, and dark mode costs nothing extra.
+ * These follow Cloudscape's own dark-mode switch rather than defining an
+ * independent palette. `applyMode` puts `.awsui-dark-mode` on the root element,
+ * so one class toggles both the console chrome and everything here — the login
+ * screen cannot drift out of step with the console it leads into, and dark mode
+ * costs nothing extra.
  *
  * The visual language is Swiss-minimal: a strict spacing scale, one accent,
- * generous whitespace, no decorative shadows.
+ * generous whitespace, and no decorative shadows.
  */
 
 :root {
-  /* Spacing — a 4px scale, matching Cloudscape's own rhythm. */
-  --space-xs: 0.25rem;
-  --space-s: 0.5rem;
+  /* ---- Spacing: a 4px scale, matching Cloudscape's own rhythm ---------- */
+  --space-3xs: 0.125rem;
+  --space-2xs: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-s: 0.75rem;
   --space-m: 1rem;
   --space-l: 1.5rem;
-  --space-xl: 2.5rem;
-  --space-xxl: 4rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4.5rem;
 
-  /* Type scale. */
-  --font-size-caption: 0.75rem;
-  --font-size-body: 0.875rem;
-  --font-size-lead: 1rem;
-  --font-size-heading: 1.5rem;
-  --font-size-display: 2rem;
+  /* ---- Type: fluid between the 375px and 1440px breakpoints -----------
+     clamp() means one declaration covers every viewport, so headings shrink
+     on a phone without a media query and without ever dropping below a
+     readable floor. */
+  --text-caption: 0.75rem;
+  --text-body-s: 0.8125rem;
+  --text-body: 0.875rem;
+  --text-lead: clamp(0.9375rem, 0.9rem + 0.2vw, 1.0625rem);
+  --text-title: clamp(1.125rem, 1rem + 0.6vw, 1.375rem);
+  --text-heading: clamp(1.375rem, 1.15rem + 1vw, 1.875rem);
+  --text-display: clamp(1.75rem, 1.3rem + 2.2vw, 2.75rem);
 
-  --radius: 8px;
+  --leading-tight: 1.2;
+  --leading-snug: 1.4;
+  --leading-normal: 1.6;
+
+  --radius-s: 6px;
+  --radius: 10px;
+  --radius-l: 14px;
+  --radius-pill: 999px;
   --border-width: 1px;
 
-  /* Light theme. */
-  --surface-page: #f6f7f8;
+  /* ---- Light theme ---------------------------------------------------- */
+  --surface-page: #f4f6f8;
   --surface-raised: #ffffff;
-  --surface-sunken: #eef0f2;
-  --text-strong: #14202e;
-  --text-default: #364150;
+  --surface-sunken: #eaeef2;
+  --surface-inset: #f7f9fb;
+  --text-strong: #101c2b;
+  --text-default: #34414f;
   --text-muted: #5f6b7a;
-  --border-subtle: #d3d7dc;
-  --accent: #006ce0;
-  --accent-strong: #004a99;
+  --text-faint: #8996a5;
+  --border-subtle: #d5dae0;
+  --border-strong: #b6bfc9;
+  --accent: #0060d1;
+  --accent-hover: #004a9f;
+  --accent-strong: #003a80;
   --accent-contrast: #ffffff;
-  --danger: #d13212;
+  --accent-wash: #e8f1fd;
+  --success: #00802f;
+  --warning: #8a6100;
+  --danger: #cf2a17;
+  --danger-wash: #fdeceb;
 
-  /* Motion. Kept short and consistent; every transition uses these. */
+  /* Elevation: one scale, three steps. Random shadow values are the fastest
+     way to make a considered interface look unconsidered. */
+  --elevation-1: 0 1px 2px rgba(16, 28, 43, 0.06), 0 1px 1px rgba(16, 28, 43, 0.04);
+  --elevation-2: 0 2px 8px rgba(16, 28, 43, 0.08), 0 1px 2px rgba(16, 28, 43, 0.05);
+  --elevation-3: 0 12px 32px rgba(16, 28, 43, 0.12), 0 2px 8px rgba(16, 28, 43, 0.06);
+
+  /* ---- Motion: one rhythm, used everywhere ---------------------------- */
   --duration-fast: 120ms;
   --duration-base: 200ms;
-  --easing-standard: cubic-bezier(0.2, 0, 0.2, 1);
+  --duration-slow: 320ms;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-spring: cubic-bezier(0.34, 1.28, 0.64, 1);
+
+  --focus-ring: 0 0 0 2px var(--surface-raised), 0 0 0 4px var(--accent);
 }
 
 .awsui-dark-mode {
-  --surface-page: #0f1b2a;
-  --surface-raised: #192534;
-  --surface-sunken: #232f3e;
-  --text-strong: #f7f8fa;
-  --text-default: #d5dbdb;
-  --text-muted: #a3adb9;
-  --border-subtle: #414d5c;
-  --accent: #539fe5;
-  --accent-strong: #89bdee;
-  --accent-contrast: #0f1b2a;
-  --danger: #ff7a70;
+  --surface-page: #0b1622;
+  --surface-raised: #16212e;
+  --surface-sunken: #1f2b3a;
+  --surface-inset: #121d29;
+  --text-strong: #f4f7fa;
+  --text-default: #d3dae2;
+  --text-muted: #9fadbc;
+  --text-faint: #7a8798;
+  --border-subtle: #3a4757;
+  --border-strong: #4d5c6e;
+  --accent: #5ba4f0;
+  --accent-hover: #8cc0f6;
+  --accent-strong: #a9d1f8;
+  --accent-contrast: #0b1622;
+  --accent-wash: #16304a;
+  --success: #4ec77a;
+  --warning: #e0a93c;
+  --danger: #ff8a7d;
+  --danger-wash: #3a1e1c;
+
+  /* Dark surfaces separate by lightness, not by shadow — a drop shadow on a
+     dark background reads as smudge rather than elevation. */
+  --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --elevation-2: 0 2px 10px rgba(0, 0, 0, 0.45);
+  --elevation-3: 0 14px 36px rgba(0, 0, 0, 0.55);
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -73,18 +123,95 @@ body {
   margin: 0;
   padding: 0;
   /* dvh rather than vh: mobile browsers shrink the viewport when the address
-     bar is visible, which makes 100vh overflow. */
+     bar shows, which makes 100vh overflow by exactly the bar's height. */
   min-height: 100dvh;
 }
 
 body {
   background: var(--surface-page);
   color: var(--text-default);
+  /* Prevents iOS from inflating text in landscape without disabling zoom. */
+  -webkit-text-size-adjust: 100%;
 }
+
+/* One focus treatment for every custom control. :focus-visible rather than
+   :focus so a mouse click does not leave a ring behind, while keyboard
+   traversal always shows one. */
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-s);
+}
+
+/* Lets a keyboard user reach the page content without tabbing the whole
+   navigation tree first. Visible only while focused. */
+.skip-link {
+  position: absolute;
+  left: var(--space-m);
+  top: calc(-1 * var(--space-3xl));
+  z-index: 2000;
+  padding: var(--space-xs) var(--space-m);
+  border-radius: var(--radius-s);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: var(--text-body);
+  font-weight: 600;
+  text-decoration: none;
+  transition: top var(--duration-base) var(--ease-out);
+}
+
+.skip-link:focus {
+  top: var(--space-m);
+}
+
+/* ---- Entrance motion -------------------------------------------------
+   Two utilities, used sparingly. Both animate only transform and opacity, so
+   they run on the compositor and cannot trigger layout. */
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-rise {
+  animation: rise-in var(--duration-slow) var(--ease-out) both;
+}
+
+.animate-fade {
+  animation: fade-in var(--duration-base) var(--ease-out) both;
+}
+
+/* Staggers a short sequence. Beyond about six items the delay becomes a wait
+   rather than a flourish, so the scale stops there. */
+.stagger > * {
+  animation: rise-in var(--duration-slow) var(--ease-out) both;
+}
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 40ms; }
+.stagger > *:nth-child(3) { animation-delay: 80ms; }
+.stagger > *:nth-child(4) { animation-delay: 120ms; }
+.stagger > *:nth-child(5) { animation-delay: 160ms; }
+.stagger > *:nth-child(n + 6) { animation-delay: 200ms; }
 
 /*
  * Motion is meaningful or absent. Users who ask their operating system for
- * reduced motion get none of it, including the shell's own transitions.
+ * reduced motion get none of it — including the entrance animations above,
+ * which are decorative by definition.
  */
 @media (prefers-reduced-motion: reduce) {
   *,

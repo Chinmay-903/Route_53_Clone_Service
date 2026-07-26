@@ -1,10 +1,13 @@
 'use client';
 
+import Input from '@cloudscape-design/components/input';
 import TopNavigation from '@cloudscape-design/components/top-navigation';
 import { useQuery } from '@tanstack/react-query';
 
 import { logout, readCurrentUser } from '@/lib/api';
 import { queryKeys } from '@/lib/queries/keys';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
 
 /**
  * The console's top bar.
@@ -46,41 +49,35 @@ export function AppTopNavigation({
           title: 'Route 53 Console Clone',
           logo: { src: '/brand-mark.svg', alt: '' },
         }}
+        // Cloudscape collapses this into an icon below its own breakpoint, so
+        // the bar stays usable on a tablet without a second implementation.
         search={
-          <input
+          <Input
             type="search"
+            value=""
+            readOnly
             placeholder="Search services"
-            aria-label="Search services"
-            disabled
-            title="Service search is not part of this build"
-            style={{
-              width: '100%',
-              padding: '6px 10px',
-              borderRadius: 6,
-              border: '1px solid var(--border-subtle)',
-              background: 'var(--surface-sunken)',
-              color: 'var(--text-muted)',
-              font: 'inherit',
-            }}
+            ariaLabel="Search services — not functional in this build"
           />
         }
         utilities={[
           {
             type: 'button',
-            iconName: darkMode ? 'star' : 'star-half',
-            text: darkMode ? 'Light mode' : 'Dark mode',
+            // A sun and moon rather than one of Cloudscape's stock glyphs: the
+            // control switches appearance, and no built-in icon says that.
+            iconSvg: darkMode ? <SunIcon /> : <MoonIcon />,
+            text: darkMode ? 'Light' : 'Dark',
             ariaLabel: darkMode ? 'Switch to light mode' : 'Switch to dark mode',
             onClick: onToggleTheme,
           },
           {
             type: 'button',
+            iconName: 'settings',
             text: 'N. Virginia',
-            // Decorative: there are no regions in this application, and a
-            // control that looks interactive but does nothing is worse than one
-            // that says so.
-            ariaLabel: 'Region selector, not functional in this build',
-            disableUtilityCollapse: false,
-            onClick: () => undefined,
+            // Decorative: this application has no regions. Saying so in the
+            // label is better than a control that looks live and does nothing.
+            ariaLabel: 'Region selector — not functional in this build',
+            disableTextCollapse: false,
           },
           {
             type: 'menu-dropdown',
@@ -91,12 +88,19 @@ export function AppTopNavigation({
             onItemClick: ({ detail }) => {
               if (detail.id === 'signout') void handleSignOut();
             },
-            items: [{ id: 'signout', text: 'Sign out' }],
+            items: [
+              {
+                id: 'docs',
+                text: 'API documentation',
+                href: `${API_BASE_URL}/docs`,
+                external: true,
+                externalIconAriaLabel: '(opens in a new tab)',
+              },
+              { id: 'signout', text: 'Sign out' },
+            ],
           },
         ]}
         i18nStrings={{
-          searchIconAriaLabel: 'Search',
-          searchDismissIconAriaLabel: 'Close search',
           overflowMenuTriggerText: 'More',
           overflowMenuTitleText: 'All',
           overflowMenuBackIconAriaLabel: 'Back',
@@ -104,5 +108,30 @@ export function AppTopNavigation({
         }}
       />
     </div>
+  );
+}
+
+/** Outline sun, matching Cloudscape's 16px icon grid and 1.5px stroke. */
+function SunIcon() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" focusable="false">
+      <circle cx="8" cy="8" r="3.25" />
+      <path
+        d="M8 1v1.5M8 13.5V15M15 8h-1.5M2.5 8H1M12.95 3.05l-1.06 1.06M4.11 11.89l-1.06 1.06M12.95 12.95l-1.06-1.06M4.11 4.11L3.05 3.05"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/** Outline moon, drawn on the same grid so the two toggle states feel paired. */
+function MoonIcon() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" focusable="false">
+      <path
+        d="M13.5 9.6A5.8 5.8 0 0 1 6.4 2.5a5.75 5.75 0 1 0 7.1 7.1Z"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
