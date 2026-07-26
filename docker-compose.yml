@@ -1,0 +1,27 @@
+# Local parity with the deployed setup. Secrets come from a .env file that is
+# never committed; see .env.example for the template.
+
+services:
+  api:
+    build: ./backend
+    ports:
+      - '8000:8000'
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: sqlite:////data/route53.db
+      CORS_ORIGINS: http://localhost:3000
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in .env}
+      DEMO_USER_EMAIL: ${DEMO_USER_EMAIL:-demo@route53clone.dev}
+      DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:?set DEMO_USER_PASSWORD in .env}
+    volumes:
+      # A named volume, not a bind mount: the point is that the database
+      # survives the container, which is exactly what production needs too.
+      - api-data:/data
+    healthcheck:
+      test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  api-data:

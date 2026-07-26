@@ -1,0 +1,49 @@
+erDiagram
+    users ||--o{ sessions : has
+    users ||--o{ hosted_zones : owns
+    hosted_zones ||--o{ record_sets : contains
+    record_sets ||--o{ record_values : has
+
+    users {
+      int id PK
+      string email UK "COLLATE NOCASE"
+      string password_hash "Argon2id"
+      string created_at
+    }
+    sessions {
+      string id PK "SHA-256 of the token"
+      int user_id FK
+      string expires_at
+      string created_at
+    }
+    hosted_zones {
+      int id PK
+      string public_id UK "Z + base32"
+      int user_id FK
+      string name "UNIQUE with user_id"
+      string type "Public | Private"
+      string comment
+      int record_count
+      string created_by
+      string created_at
+      string updated_at
+    }
+    record_sets {
+      int id PK
+      string public_id UK
+      int hosted_zone_id FK
+      string name
+      string type
+      int ttl
+      string routing_policy
+      string set_identifier
+      int is_system "SOA and apex NS"
+      string created_at
+      string updated_at
+    }
+    record_values {
+      int id PK
+      int record_set_id FK
+      string value
+      int sort_order
+    }

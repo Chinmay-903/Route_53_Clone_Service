@@ -16,9 +16,7 @@ def main() -> None:
     """Write openapi.json to the path given as the first argument."""
     destination = Path(sys.argv[1] if len(sys.argv) > 1 else "openapi.json")
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(create_app().openapi(), indent=2) + "\n", encoding="utf-8"
-    )
+    destination.write_text(json.dumps(create_app().openapi(), indent=2) + "\n", encoding="utf-8")
     print(f"Wrote {destination}")
 
 

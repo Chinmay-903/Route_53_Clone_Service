@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege: no job here writes to the repository.
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - run: pip install -e ".[dev]"
+
+      - name: Lint
+        run: |
+          ruff check .
+          ruff format --check .
+
+      - name: Typecheck
+        run: mypy app
+
+      - name: Test
+        run: pytest -q
+        env:
+          SESSION_SECRET: ci-only-value-at-least-32-characters-long
+          DEMO_USER_PASSWORD: ci-demo-password
+
+      - name: Audit dependencies
+        run: pip-audit --ignore-vuln GHSA-4xh5-x5gv-qwph || true
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # The anti-drift gate: export the contract from the application itself,
+      # regenerate the client, then typecheck. A breaking API change fails here
+      # rather than in a browser.
+      - name: Export OpenAPI schema
+        working-directory: backend
+        run: |
+          pip install -e .
+          python scripts/export_openapi.py ../frontend/openapi.json
+        env:
+          SESSION_SECRET: ci-only-value-at-least-32-characters-long
+          DEMO_USER_PASSWORD: ci-demo-password
+
+      - name: Install
+        working-directory: frontend
+        run: npm ci
+
+      - name: Regenerate API client
+        working-directory: frontend
+        run: npm run generate:api
+
+      - name: Fail if the generated client is out of date
+        working-directory: frontend
+        run: git diff --exit-code -- src/lib/api
+
+      - name: Typecheck
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+
+      - name: Audit dependencies
+        working-directory: frontend
+        run: npm audit --audit-level=high || true
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          # gitleaks needs the whole history, not just the tip commit: a secret
+          # removed in a later commit is still recoverable from an earlier one.
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@83373cf2f8c4db6e24b41c1a9b086bb9619e9cd3 # v2.3.7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

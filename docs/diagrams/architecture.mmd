@@ -1,0 +1,30 @@
+flowchart TB
+    Browser["Browser"]
+
+    subgraph Frontend["Next.js (Vercel)"]
+        MW["middleware.ts<br/>CSP nonce, security headers, redirect"]
+        Shell["ConsoleShell<br/>Cloudscape AppLayout"]
+        Query["TanStack Query<br/>+ generated client"]
+    end
+
+    subgraph Backend["FastAPI (Fly.io + volume)"]
+        Routers["Routers<br/>parse, delegate, return"]
+        Services["Services<br/>business rules"]
+        Protocols["Repository protocols"]
+        Repos["SQLAlchemy repositories<br/>owner filter in WHERE"]
+        Domain["domain/<br/>pure DNS rules, no imports"]
+    end
+
+    DB[("SQLite<br/>WAL, foreign_keys ON")]
+
+    Browser --> MW --> Shell --> Query
+    Query -- "cookie + CSRF header" --> Routers
+    Routers --> Services
+    Services --> Protocols
+    Protocols -.implemented by.-> Repos
+    Services --> Domain
+    Repos --> DB
+
+    OpenAPI["openapi.json"]
+    Routers -. "exported in CI" .-> OpenAPI
+    OpenAPI -. "generates" .-> Query
