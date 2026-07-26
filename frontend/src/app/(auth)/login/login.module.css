@@ -1,0 +1,136 @@
+/*
+ * Login screen layout.
+ *
+ * A CSS module rather than inline styles because the composition depends on a
+ * media query: the brand panel is supporting content, so below 900px it is
+ * removed entirely rather than compressed into a strip above the form it
+ * exists to introduce.
+ */
+
+.page {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  background: var(--surface-page);
+}
+
+.brandPanel {
+  display: none;
+}
+
+.formPanel {
+  display: grid;
+  place-items: center;
+  padding: var(--space-xl) var(--space-l);
+}
+
+.formInner {
+  width: 100%;
+  max-width: 380px;
+}
+
+@media (min-width: 900px) {
+  .page {
+    grid-template-columns: 1.1fr 1fr;
+  }
+
+  .brandPanel {
+    display: grid;
+    place-items: center;
+    padding: var(--space-xxl);
+    background: linear-gradient(160deg, var(--accent-strong), var(--accent));
+  }
+}
+
+.brandInner {
+  max-width: 40ch;
+  display: grid;
+  gap: var(--space-l);
+  color: var(--accent-contrast);
+}
+
+.brandHeadline {
+  margin: 0;
+  font-size: var(--font-size-display);
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.brandBody {
+  margin: 0;
+  font-size: var(--font-size-lead);
+  line-height: 1.6;
+  opacity: 0.85;
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--font-size-heading);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-strong);
+}
+
+.subheading {
+  margin: var(--space-xs) 0 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-body);
+}
+
+.header {
+  margin-bottom: var(--space-xl);
+}
+
+.alertSlot {
+  margin-bottom: var(--space-l);
+}
+
+.fields {
+  display: grid;
+  gap: var(--space-l);
+}
+
+.demoBox {
+  margin-top: var(--space-xl);
+  padding: var(--space-m);
+  background: var(--surface-sunken);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius);
+}
+
+.demoTitle {
+  margin: 0 0 var(--space-s);
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.demoList {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--space-m);
+  row-gap: var(--space-xs);
+  font-size: var(--font-size-body);
+}
+
+.demoTerm {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.demoValue {
+  margin: 0;
+  color: var(--text-strong);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.disclaimer {
+  margin-top: var(--space-l);
+  font-size: var(--font-size-caption);
+  line-height: 1.5;
+  color: var(--text-muted);
+}

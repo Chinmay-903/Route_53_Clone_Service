@@ -1,0 +1,38 @@
+'use client';
+
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { NuqsAdapter } from 'nuqs/adapters/next/app';
+import { useState } from 'react';
+
+// Registers the CSRF interceptor on the generated client.
+import '@/lib/queries/client';
+
+/** Client-side providers shared by every route. */
+export function Providers({ children }: { children: React.ReactNode }) {
+  // Created in state rather than at module scope so each browser tab gets its
+  // own cache and no request state is shared across users during SSR.
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 30_000,
+            // A 401 or 404 will not become a 200 on retry; retrying only delays
+            // the error the user needs to see.
+            retry: (failureCount, error) => {
+              const status = (error as { status?: number } | null)?.status;
+              if (status === 401 || status === 404) return false;
+              return failureCount < 2;
+            },
+            refetchOnWindowFocus: false,
+          },
+        },
+      }),
+  );
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <NuqsAdapter>{children}</NuqsAdapter>
+    </QueryClientProvider>
+  );
+}

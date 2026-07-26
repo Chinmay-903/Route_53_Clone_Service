@@ -1,0 +1,98 @@
+/*
+ * Design tokens for the surfaces Cloudscape does not own: the login screen,
+ * the Coming Soon placeholders, empty states, and error states.
+ *
+ * These deliberately follow Cloudscape's own dark-mode switch rather than
+ * defining an independent palette. `applyMode` puts `.awsui-dark-mode` on the
+ * root element, so one class toggles both the console chrome and everything
+ * here — the login screen cannot drift out of step with the console it leads
+ * into, and dark mode costs nothing extra.
+ *
+ * The visual language is Swiss-minimal: a strict spacing scale, one accent,
+ * generous whitespace, no decorative shadows.
+ */
+
+:root {
+  /* Spacing — a 4px scale, matching Cloudscape's own rhythm. */
+  --space-xs: 0.25rem;
+  --space-s: 0.5rem;
+  --space-m: 1rem;
+  --space-l: 1.5rem;
+  --space-xl: 2.5rem;
+  --space-xxl: 4rem;
+
+  /* Type scale. */
+  --font-size-caption: 0.75rem;
+  --font-size-body: 0.875rem;
+  --font-size-lead: 1rem;
+  --font-size-heading: 1.5rem;
+  --font-size-display: 2rem;
+
+  --radius: 8px;
+  --border-width: 1px;
+
+  /* Light theme. */
+  --surface-page: #f6f7f8;
+  --surface-raised: #ffffff;
+  --surface-sunken: #eef0f2;
+  --text-strong: #14202e;
+  --text-default: #364150;
+  --text-muted: #5f6b7a;
+  --border-subtle: #d3d7dc;
+  --accent: #006ce0;
+  --accent-strong: #004a99;
+  --accent-contrast: #ffffff;
+  --danger: #d13212;
+
+  /* Motion. Kept short and consistent; every transition uses these. */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --easing-standard: cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+.awsui-dark-mode {
+  --surface-page: #0f1b2a;
+  --surface-raised: #192534;
+  --surface-sunken: #232f3e;
+  --text-strong: #f7f8fa;
+  --text-default: #d5dbdb;
+  --text-muted: #a3adb9;
+  --border-subtle: #414d5c;
+  --accent: #539fe5;
+  --accent-strong: #89bdee;
+  --accent-contrast: #0f1b2a;
+  --danger: #ff7a70;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  /* dvh rather than vh: mobile browsers shrink the viewport when the address
+     bar is visible, which makes 100vh overflow. */
+  min-height: 100dvh;
+}
+
+body {
+  background: var(--surface-page);
+  color: var(--text-default);
+}
+
+/*
+ * Motion is meaningful or absent. Users who ask their operating system for
+ * reduced motion get none of it, including the shell's own transitions.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

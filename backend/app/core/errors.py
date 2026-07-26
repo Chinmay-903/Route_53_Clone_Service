@@ -29,7 +29,7 @@ logger = structlog.get_logger(__name__)
 # Each domain exception maps to exactly one status and one stable "type" slug.
 # Clients branch on the slug, never on the prose in "detail".
 _DOMAIN_STATUS: dict[type[DomainError], tuple[int, str]] = {
-    ValidationError: (status.HTTP_422_UNPROCESSABLE_ENTITY, "validation-failed"),
+    ValidationError: (status.HTTP_422_UNPROCESSABLE_CONTENT, "validation-failed"),
     InvalidCredentialsError: (status.HTTP_401_UNAUTHORIZED, "invalid-credentials"),
     ConflictError: (status.HTTP_409_CONFLICT, "conflict"),
     ImmutableRecordError: (status.HTTP_409_CONFLICT, "record-immutable"),
@@ -42,8 +42,8 @@ _TITLES: dict[int, str] = {
     status.HTTP_403_FORBIDDEN: "Forbidden",
     status.HTTP_404_NOT_FOUND: "Resource not found",
     status.HTTP_409_CONFLICT: "Conflict",
-    status.HTTP_413_REQUEST_ENTITY_TOO_LARGE: "Payload too large",
-    status.HTTP_422_UNPROCESSABLE_ENTITY: "Validation failed",
+    status.HTTP_413_CONTENT_TOO_LARGE: "Payload too large",
+    status.HTTP_422_UNPROCESSABLE_CONTENT: "Validation failed",
     status.HTTP_429_TOO_MANY_REQUESTS: "Too many requests",
     status.HTTP_500_INTERNAL_SERVER_ERROR: "Internal server error",
 }
@@ -86,7 +86,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     ) -> JSONResponse:
         return problem_response(
             request,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "validation-failed",
             "The request body failed validation.",
             {"errors": _summarize_pydantic_errors(exc)},
