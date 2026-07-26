@@ -1,0 +1,24 @@
+# gitleaks configuration. Runs in pre-commit and in CI against full history.
+# Extends the upstream ruleset rather than replacing it, so new upstream rules
+# are picked up automatically on version bumps.
+
+title = "route53-clone"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Placeholders and fixtures that are deliberately not secrets."
+
+paths = [
+  '''\.env\.example$''',
+  '''docs/SECURITY\.md$''',
+  '''README\.md$''',
+]
+
+# Argon2 hashes in test fixtures are outputs, not inputs — they cannot be
+# reversed into a credential and must stay readable in the test source.
+regexes = [
+  '''replace-me[a-z0-9-]*''',
+  '''\$argon2id\$v=19\$''',
+]

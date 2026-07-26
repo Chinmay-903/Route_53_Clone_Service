@@ -1,0 +1,44 @@
+# Secrets — never commit. See .env.example for the template.
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+*.egg-info/
+
+# SQLite database files and WAL sidecars
+*.db
+*.db-wal
+*.db-shm
+*.sqlite3
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+.vercel/
+
+# Playwright
+playwright-report/
+test-results/
+blob-report/
+/frontend/e2e/.auth/
+
+# Editors and OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
