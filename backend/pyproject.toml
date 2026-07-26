@@ -9,6 +9,8 @@ dependencies = [
     "sqlalchemy>=2.0.36",
     "alembic>=1.14.0",
     "pydantic>=2.10.4",
+    # Backs Pydantic's EmailStr, which is not usable without it.
+    "email-validator>=2.2.0",
     "pydantic-settings>=2.7.0",
     "argon2-cffi>=23.1.0",
     "python-multipart>=0.0.20",
@@ -55,12 +57,22 @@ select = [
 ignore = [
     "D203",   # conflicts with D211, which we keep
     "D213",   # conflicts with D212, which we keep
-    "PLR0913",  # argument count: service constructors legitimately take several repositories
+    # FastAPI endpoints and service constructors legitimately declare many
+    # parameters; the framework always supplies them by name, so positional
+    # argument counts are not a readability signal here.
+    "PLR0913",
+    "PLR0917",
+    # Arity checks such as `len(parts) != 2` sit directly beside an error
+    # message stating the expected format. A named constant would add
+    # indirection without adding clarity.
+    "PLR2004",
 ]
 
 [tool.ruff.lint.per-file-ignores]
 # Tests assert on internals and use hardcoded fixture passwords by design.
-"tests/*" = ["D", "S101", "S105", "S106", "PLR2004"]
+# Imports are deliberately deferred inside fixtures so environment variables are
+# in place before anything under `app` is imported.
+"tests/*" = ["D", "S101", "S105", "S106", "PLC0415"]
 "alembic/*" = ["D", "N999"]
 
 [tool.ruff.lint.pydocstyle]
