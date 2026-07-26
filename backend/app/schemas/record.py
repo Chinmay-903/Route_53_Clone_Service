@@ -158,11 +158,13 @@ RecordSetWrite = Annotated[
 
 
 class RecordSetResponse(BaseModel):
-    """A record set as returned by the API."""
+    """A record set as returned by the API.
 
-    model_config = ConfigDict(from_attributes=True)
+    Built explicitly by the router rather than from the ORM object, because
+    `values` has to be flattened out of the child table into a list of strings.
+    """
 
-    id: str = Field(validation_alias="public_id")
+    id: str = Field(description="Opaque record identifier.")
     name: str
     type: str
     ttl: int

@@ -32,18 +32,14 @@ class HostedZone(Base):
     __table_args__ = (
         # A user cannot hold the same domain twice; two different users can.
         UniqueConstraint("user_id", "name", name="uq_zones_user_name"),
-        CheckConstraint(
-            "type IN ('Public','Private')", name="ck_zones_type"
-        ),
+        CheckConstraint("type IN ('Public','Private')", name="ck_zones_type"),
         Index("ix_zones_user", "user_id"),
         Index("ix_zones_name", "name"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     public_id: Mapped[str] = mapped_column(String(32), nullable=False, unique=True)
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     name: Mapped[str] = mapped_column(String(255, collation="NOCASE"), nullable=False)
     type: Mapped[str] = mapped_column(String(16), nullable=False)
     # Surfaced in the console as "Description"; the API keeps Route 53's own term.

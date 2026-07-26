@@ -31,7 +31,9 @@ router = APIRouter(prefix="/hosted-zones", tags=["Hosted zones"])
 def list_hosted_zones(
     user: CurrentUser,
     service: HostedZoneServiceDep,
-    search: Annotated[str | None, Query(max_length=255, description="Substring of the name.")] = None,
+    search: Annotated[
+        str | None, Query(max_length=255, description="Substring of the name.")
+    ] = None,
     sort: ZoneSortField = ZoneSortField.NAME,
     order: SortOrder = SortOrder.ASC,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = 10,

@@ -12,7 +12,7 @@ from app.core.security import (
     session_expiry,
     verify_password,
 )
-from app.domain.errors import DomainError
+from app.domain.errors import InvalidCredentialsError
 from app.models.identity import User
 from app.repositories.protocols import SessionRepository, UserRepository
 
@@ -20,10 +20,6 @@ from app.repositories.protocols import SessionRepository, UserRepository
 # when no account exists keeps the failure path's timing close to the success
 # path's, so response latency does not reveal which addresses are registered.
 _TIMING_DECOY_HASH = hash_password(secrets.token_urlsafe(32))
-
-
-class InvalidCredentialsError(DomainError):
-    """Login failed. Deliberately does not distinguish which field was wrong."""
 
 
 class AuthService:

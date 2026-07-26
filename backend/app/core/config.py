@@ -15,9 +15,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Environment-backed configuration for the API."""
 
-    model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     environment: Literal["development", "production"] = "development"
 
@@ -65,5 +63,9 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    """Return the process-wide settings singleton."""
-    return Settings()  # type: ignore[call-arg]  # values come from the environment
+    """Return the process-wide settings singleton.
+
+    Fields without defaults are supplied by pydantic-settings from the
+    environment, which is why the constructor takes no arguments here.
+    """
+    return Settings()

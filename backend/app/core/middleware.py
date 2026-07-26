@@ -10,6 +10,7 @@ from collections.abc import Awaitable, Callable
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
+from starlette.types import ASGIApp
 
 # One megabyte comfortably exceeds any legitimate JSON body here and any
 # realistic zone file, while bounding what a single request can allocate.
@@ -28,9 +29,9 @@ _SECURITY_HEADERS = {
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Add hardening headers to every response, including error responses."""
 
-    def __init__(self, app: Callable[..., object], *, enable_hsts: bool) -> None:
+    def __init__(self, app: ASGIApp, *, enable_hsts: bool) -> None:
         """Enable HSTS only in production, where the origin is genuinely HTTPS."""
-        super().__init__(app)  # type: ignore[arg-type]  - Starlette's own annotation is loose
+        super().__init__(app)
         self._enable_hsts = enable_hsts
 
     async def dispatch(
@@ -40,9 +41,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         response.headers.update(_SECURITY_HEADERS)
         if self._enable_hsts:
-            response.headers["Strict-Transport-Security"] = (
-                "max-age=31536000; includeSubDomains"
-            )
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
 

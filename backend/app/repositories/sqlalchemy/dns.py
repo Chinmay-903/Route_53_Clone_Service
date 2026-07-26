@@ -120,9 +120,7 @@ class SqlAlchemyRecordSetRepository:
         if record_type:
             conditions.append(RecordSet.type == record_type)
 
-        total = self._session.scalar(
-            select(func.count()).select_from(RecordSet).where(*conditions)
-        )
+        total = self._session.scalar(select(func.count()).select_from(RecordSet).where(*conditions))
         column = _RECORD_SORT_COLUMNS[sort]
         statement = (
             self._with_values(select(RecordSet))

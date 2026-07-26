@@ -146,8 +146,7 @@ class RecordService:
         # Replacing the list lets the orphan cascade delete the old rows, so
         # values never accumulate across edits.
         record.values = [
-            RecordValue(value=value, sort_order=index)
-            for index, value in enumerate(clean_values)
+            RecordValue(value=value, sort_order=index) for index, value in enumerate(clean_values)
         ]
         self._session.commit()
         return record
@@ -199,7 +198,7 @@ class RecordService:
         existing = self._records.find_matching(zone.id, name, record_type, set_identifier)
         if existing is not None and existing.id != exclude:
             raise ConflictError(
-                f"A {record_type} record set named '{name}' already exists in this zone."
+                f"A record set of type {record_type} named '{name}' already exists in this zone."
             )
 
     def _reject_cname_conflicts(
@@ -242,6 +241,4 @@ def _reject_system_record(record: RecordSet, action: str) -> None:
     unresolvable, so the console shows them but disables their actions.
     """
     if record.is_system:
-        raise ImmutableRecordError(
-            f"The zone's generated {record.type} record cannot be {action}."
-        )
+        raise ImmutableRecordError(f"The zone's generated {record.type} record cannot be {action}.")

@@ -92,6 +92,7 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 
 def require_csrf_token(
     request: Request,
+    session_token: Annotated[str | None, Cookie(alias=SESSION_COOKIE_NAME)] = None,
     csrf_cookie: Annotated[str | None, Cookie(alias=CSRF_COOKIE_NAME)] = None,
     csrf_header: Annotated[str | None, Header(alias=CSRF_HEADER_NAME)] = None,
 ) -> None:
@@ -101,6 +102,12 @@ def require_csrf_token(
     the cookie nor set the header, so it cannot produce a matching pair.
     """
     if request.method in {"GET", "HEAD", "OPTIONS"}:
+        return
+    # Router-level dependencies run before the endpoint's own, so without this
+    # an unauthenticated write would report 403 for a missing CSRF token and
+    # never reach the 401 that actually describes the problem. There is nothing
+    # to forge on behalf of a caller who has no session.
+    if session_token is None:
         return
     if not csrf_tokens_match(csrf_cookie, csrf_header):
         raise HTTPException(

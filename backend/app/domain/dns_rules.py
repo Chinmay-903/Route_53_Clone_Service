@@ -177,7 +177,7 @@ def _validate_caa(value: str) -> str:
     if len(parts) != 3:
         raise ValidationError(
             f"'{value}' is not a valid CAA value. Use 'flags tag \"value\"', "
-            'for example \'0 issue "amazon.com"\'.'
+            "for example '0 issue \"amazon.com\"'."
         )
     flags = _parse_int_in_range(parts[0], "CAA flags", 0, MAX_CAA_FLAGS)
     tag = parts[1].lower()

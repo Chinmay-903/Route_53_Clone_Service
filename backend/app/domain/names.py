@@ -54,9 +54,7 @@ def _to_ascii_label(label: str) -> str:
 
     ascii_label = label if label.isascii() else _punycode(label)
     if len(ascii_label) > MAX_LABEL_LENGTH:
-        raise ValidationError(
-            f"Label '{label}' exceeds the {MAX_LABEL_LENGTH}-character limit."
-        )
+        raise ValidationError(f"Label '{label}' exceeds the {MAX_LABEL_LENGTH}-character limit.")
     if not _LABEL_PATTERN.match(ascii_label):
         raise ValidationError(
             f"Label '{label}' is invalid. Use letters, digits, and hyphens; "

@@ -1,6 +1,8 @@
 """SQLAlchemy implementations of the user and session repositories."""
 
-from sqlalchemy import delete, select
+from typing import Any, cast
+
+from sqlalchemy import CursorResult, delete, select
 from sqlalchemy.orm import Session
 
 from app.core.security import now_timestamp
@@ -62,7 +64,12 @@ class SqlAlchemySessionRepository:
         Called opportunistically on login rather than from a scheduler, which
         keeps the deployment to a single process with no background worker.
         """
-        result = self._session.execute(
-            delete(UserSession).where(UserSession.expires_at <= now_timestamp())
+        # A DELETE always yields a CursorResult; Session.execute's signature is
+        # broader, so the row count needs the narrower type to be visible.
+        result = cast(
+            CursorResult[Any],
+            self._session.execute(
+                delete(UserSession).where(UserSession.expires_at <= now_timestamp())
+            ),
         )
         return result.rowcount or 0

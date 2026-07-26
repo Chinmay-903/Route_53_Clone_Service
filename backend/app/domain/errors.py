@@ -26,6 +26,14 @@ class ConflictError(DomainError):
     """
 
 
+class InvalidCredentialsError(DomainError):
+    """Login failed. Maps to 401.
+
+    Deliberately does not record which field was wrong, so the response cannot
+    be used to enumerate registered addresses.
+    """
+
+
 class NotFoundError(DomainError):
     """A resource does not exist, or exists but is owned by another user.
 

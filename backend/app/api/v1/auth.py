@@ -32,7 +32,8 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 )
 @limiter.limit(get_settings().login_rate_limit)
 def login(
-    request: Request,  # noqa: ARG001  - slowapi resolves the client address from it
+    # Unused here, but slowapi reads the client address off it to key the limit.
+    request: Request,
     payload: LoginRequest,
     response: Response,
     auth: AuthServiceDep,

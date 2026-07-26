@@ -24,8 +24,13 @@ _CONNECTION_PRAGMAS = (
 )
 
 
-def _build_engine() -> Engine:
-    """Create the engine and register the pragma listener."""
+def build_engine() -> Engine:
+    """Create an engine with the pragma listener attached.
+
+    Public so the integration tests can rebind the module-level engine to a
+    temporary database file without the application code carrying a test-only
+    injection seam.
+    """
     settings = get_settings()
     engine = create_engine(
         settings.database_url,
@@ -45,7 +50,7 @@ def _build_engine() -> Engine:
     return engine
 
 
-engine = _build_engine()
+engine = build_engine()
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
 

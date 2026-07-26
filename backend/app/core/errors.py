@@ -17,6 +17,7 @@ from app.domain.errors import (
     ConflictError,
     DomainError,
     ImmutableRecordError,
+    InvalidCredentialsError,
     NotFoundError,
     ValidationError,
 )
@@ -29,6 +30,7 @@ logger = structlog.get_logger(__name__)
 # Clients branch on the slug, never on the prose in "detail".
 _DOMAIN_STATUS: dict[type[DomainError], tuple[int, str]] = {
     ValidationError: (status.HTTP_422_UNPROCESSABLE_ENTITY, "validation-failed"),
+    InvalidCredentialsError: (status.HTTP_401_UNAUTHORIZED, "invalid-credentials"),
     ConflictError: (status.HTTP_409_CONFLICT, "conflict"),
     ImmutableRecordError: (status.HTTP_409_CONFLICT, "record-immutable"),
     NotFoundError: (status.HTTP_404_NOT_FOUND, "not-found"),
@@ -91,9 +93,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         )
 
     @app.exception_handler(StarletteHTTPException)
-    async def _handle_http_exception(
-        request: Request, exc: StarletteHTTPException
-    ) -> JSONResponse:
+    async def _handle_http_exception(request: Request, exc: StarletteHTTPException) -> JSONResponse:
         return problem_response(
             request,
             exc.status_code,
