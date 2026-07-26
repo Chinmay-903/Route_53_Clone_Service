@@ -28,7 +28,15 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={displayFont.variable}>
-      <body>
+      {/*
+        Browser extensions — Grammarly and password managers among them — add
+        their own attributes to <body> before React hydrates, which React then
+        reports as a server/client mismatch the application cannot fix.
+
+        This suppression applies to this element's own attributes and one level
+        of text only, so a genuine mismatch anywhere inside still surfaces.
+      */}
+      <body suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>
     </html>

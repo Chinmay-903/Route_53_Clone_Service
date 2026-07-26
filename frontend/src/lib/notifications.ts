@@ -67,8 +67,19 @@ function getSnapshot(): Notification[] {
   return notifications;
 }
 
+/**
+ * The server's snapshot: always empty, because notifications are produced by
+ * client-side mutations that have not happened during a server render.
+ *
+ * Hoisted to a module constant rather than returned as a fresh `[]` literal.
+ * React compares snapshots by reference, so a new array on every call reads as
+ * "the store changed", which re-renders, which calls this again — React detects
+ * that loop and warns about it.
+ */
+const NO_NOTIFICATIONS: Notification[] = [];
+
 function getServerSnapshot(): Notification[] {
-  return [];
+  return NO_NOTIFICATIONS;
 }
 
 /** Subscribes a component to the current notification list. */
