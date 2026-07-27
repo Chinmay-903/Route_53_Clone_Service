@@ -44,6 +44,12 @@ Open **http://localhost:3000** and sign in:
 
 The database creates and seeds itself on boot — three zones with a spread of record types, so you never land on an empty screen. Seeding is idempotent, so restarting changes nothing.
 
+> **On the hosted demo:** the API runs on a free tier that stops the container
+> after 15 minutes idle. The console itself loads instantly, but the *first*
+> sign-in after a quiet spell waits up to a minute for the server to start. The
+> login screen warms the API as it loads and says so if the wait runs long — it
+> is starting, not broken. Every request after that is normal speed.
+
 > **API docs:** http://localhost:8000/docs · **Health:** http://localhost:8000/healthz
 
 ---

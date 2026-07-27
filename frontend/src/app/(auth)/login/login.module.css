@@ -185,6 +185,21 @@
 
 /* ---- Demo credentials ------------------------------------------------- */
 
+/*
+ * Shown only when a sign-in is taking unusually long. Styled as information
+ * rather than as an error — nothing has gone wrong, the container is starting.
+ */
+.slowNotice {
+  margin: 0;
+  padding: var(--space-s) var(--space-m);
+  border-radius: var(--radius-s);
+  background: var(--accent-wash);
+  border: var(--border-width) solid var(--border-subtle);
+  color: var(--text-default);
+  font-size: var(--text-body-s);
+  line-height: var(--leading-snug);
+}
+
 .demoBox {
   margin-top: var(--space-xl);
   padding: var(--space-m);

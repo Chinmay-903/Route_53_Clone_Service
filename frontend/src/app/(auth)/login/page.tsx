@@ -11,8 +11,19 @@ import { Suspense, useState } from 'react';
 import { BrandMark } from '@/components/ui/BrandMark';
 import { login } from '@/lib/api';
 import { toUserMessage } from '@/lib/queries/client';
+import { useWarmBackend } from '@/lib/useWarmBackend';
 
 import styles from './login.module.css';
+
+/**
+ * How long a sign-in may take before the screen explains itself.
+ *
+ * A warm server answers in well under a second, so anything past this means the
+ * free-tier container is starting. Two and a half seconds is late enough not to
+ * flash on a normal sign-in, early enough to arrive before the user assumes the
+ * page has hung.
+ */
+const SLOW_RESPONSE_MS = 2_500;
 
 /**
  * The sign-in screen.
@@ -40,11 +51,16 @@ interface FieldErrors {
 function LoginScreen() {
   const searchParams = useSearchParams();
 
+  // Starts the free-tier container waking while the user reads and types, so
+  // the cold start overlaps with something they were doing anyway.
+  useWarmBackend();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [slowResponse, setSlowResponse] = useState(false);
 
   function collectErrors(): FieldErrors {
     const errors: FieldErrors = {};
@@ -63,8 +79,18 @@ function LoginScreen() {
     if (Object.keys(errors).length > 0) return;
 
     setSubmitting(true);
-    const { error } = await login({ body: { email: email.trim(), password } });
-    setSubmitting(false);
+    // Explains a long wait rather than leaving a bare spinner. Cleared in
+    // `finally` so it cannot outlive the request that triggered it.
+    const slowTimer = setTimeout(() => setSlowResponse(true), SLOW_RESPONSE_MS);
+
+    let error;
+    try {
+      ({ error } = await login({ body: { email: email.trim(), password } }));
+    } finally {
+      clearTimeout(slowTimer);
+      setSubmitting(false);
+      setSlowResponse(false);
+    }
 
     if (error) {
       setFormError(toUserMessage(error));
@@ -154,6 +180,15 @@ function LoginScreen() {
               <Button variant="primary" formAction="submit" loading={submitting} fullWidth>
                 Sign in
               </Button>
+
+              {slowResponse && (
+                // aria-live so the explanation is announced rather than only
+                // shown; "polite" because it must not interrupt the user.
+                <p className={styles.slowNotice} role="status" aria-live="polite">
+                  Waking the demo server — this takes up to a minute on the free
+                  tier, and only on the first request after it has been idle.
+                </p>
+              )}
             </div>
           </form>
 
