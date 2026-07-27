@@ -15,6 +15,21 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+/**
+ * Renders every route per request rather than prerendering it at build time.
+ *
+ * Required by the nonce-based Content-Security-Policy. The middleware mints a
+ * fresh nonce per request and Next stamps it onto the script tags it emits —
+ * but it can only do that while handling a request. A statically prerendered
+ * page is HTML generated at build time, when no request and therefore no nonce
+ * exists, so its scripts ship without one and `strict-dynamic` blocks every one
+ * of them. The symptom is a blank page with no visible error.
+ *
+ * The cost is negligible here: every console page is behind authentication and
+ * already needs per-request work.
+ */
+export const dynamic = 'force-dynamic';
+
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
