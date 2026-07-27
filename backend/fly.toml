@@ -8,7 +8,9 @@
 #   fly secrets set SESSION_SECRET=... DEMO_USER_PASSWORD=... CORS_ORIGINS=...
 
 app = "route53-clone-api"
-primary_region = "sin"
+# Mumbai, matching the Vercel region so the console and API are not on opposite
+# sides of the Bay of Bengal. Change both together if you move either.
+primary_region = "bom"
 
 [build]
   dockerfile = "Dockerfile"
