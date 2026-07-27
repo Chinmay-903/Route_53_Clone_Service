@@ -1,18 +1,22 @@
 'use client';
 
-import Button from '@cloudscape-design/components/button';
-import ContentLayout from '@cloudscape-design/components/content-layout';
-import Header from '@cloudscape-design/components/header';
+import { motion } from 'framer-motion';
+import { ArrowRight, Globe } from 'lucide-react';
 import Link from 'next/link';
 
-import styles from './ComingSoon.module.css';
+import { EmptyState } from '@/components/feedback/EmptyState';
+import { PageContainer, PageHeader } from '@/components/layout/PageHeader';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { duration, easeOut } from '@/lib/motion';
 
 /**
  * The single reusable placeholder for console sections that are out of scope.
  *
- * Six routes render this. Rather than apologising, it explains what the real
- * feature does and why it is not here — which is more useful to a reviewer than
- * a progress bar that will never move.
+ * Fourteen routes render this. Rather than apologising, it explains what the
+ * real feature does and why it is not here — which is more useful to a reviewer
+ * than a progress bar that will never move.
  */
 export function ComingSoon({
   title,
@@ -24,87 +28,70 @@ export function ComingSoon({
   capabilities: string[];
 }) {
   return (
-    <ContentLayout header={<Header variant="h1">{title}</Header>}>
-      <div className={`${styles.panel} stagger`}>
-        <PlaceholderMotif />
+    <PageContainer>
+      <PageHeader
+        title={title}
+        badge={<Badge tone="neutral">Not in this build</Badge>}
+      />
 
-        <div className={styles.copy}>
-          <h2 className={styles.title}>Not part of this build</h2>
-          <p className={styles.description}>{description}</p>
+      <Card className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-dots opacity-60" aria-hidden="true" />
+
+        <div className="relative">
+          <EmptyState
+            variant="build"
+            title="Not part of this build"
+            description={description}
+            action={
+              <Button variant="primary" asChild>
+                <Link href="/hosted-zones">
+                  <Globe aria-hidden="true" />
+                  Go to hosted zones
+                </Link>
+              </Button>
+            }
+          />
+
+          {capabilities.length > 0 && (
+            <div className="mx-auto max-w-2xl px-6 pb-12">
+              <p className="mb-3 text-center text-2xs font-semibold uppercase tracking-wider text-ink-faint">
+                What the real feature does
+              </p>
+              <ul className="flex flex-wrap justify-center gap-2">
+                {capabilities.map((capability, index) => (
+                  <motion.li
+                    key={capability}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      duration: duration.base,
+                      ease: easeOut,
+                      delay: 0.24 + index * 0.06,
+                    }}
+                  >
+                    <Badge tone="outline" className="h-7 px-2.5">
+                      {capability}
+                    </Badge>
+                  </motion.li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="border-t border-line bg-surface-muted px-6 py-3.5 text-center">
+            <p className="text-sm text-ink-muted">
+              Hosted zones and records are fully implemented.{' '}
+              <Link
+                href="/hosted-zones"
+                className="inline-flex items-center gap-0.5 font-medium text-brand underline-offset-4 hover:underline"
+              >
+                Open them
+                <ArrowRight className="size-3" aria-hidden="true" />
+              </Link>
+            </p>
+          </div>
         </div>
-
-        {capabilities.length > 0 && (
-          <ul className={styles.chips}>
-            {capabilities.map((capability) => (
-              <li key={capability} className={styles.chip}>
-                {capability}
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <Button variant="primary" href="/hosted-zones">
-          Go to hosted zones
-        </Button>
-
-        <p className={styles.footnote}>
-          Hosted zones and records are fully implemented.{' '}
-          <Link href="/hosted-zones">Open them</Link>.
-        </p>
-      </div>
-    </ContentLayout>
-  );
-}
-
-/**
- * An original geometric motif rather than stock art.
- *
- * Reads as a partially-built structure: solid where the application is
- * complete, outlined where it is not. Decorative only, so it is hidden from
- * assistive technology — the heading beside it carries the meaning.
- */
-function PlaceholderMotif() {
-  return (
-    <svg
-      width="148"
-      height="96"
-      viewBox="0 0 148 96"
-      fill="none"
-      aria-hidden="true"
-      // Scales down with the panel on a phone instead of forcing a minimum
-      // width the container has to accommodate.
-      style={{ maxWidth: '100%', height: 'auto' }}
-    >
-      <rect
-        x="0.75"
-        y="0.75"
-        width="146.5"
-        height="94.5"
-        rx="8"
-        stroke="var(--border-subtle)"
-        strokeDasharray="5 6"
-      />
-      <rect x="20" y="56" width="28" height="22" rx="4" fill="var(--accent)" />
-      <rect x="20" y="32" width="28" height="19" rx="4" fill="var(--accent)" opacity="0.4" />
-      <rect
-        x="60.5"
-        y="44.5"
-        width="28"
-        height="33.5"
-        rx="4"
-        stroke="var(--border-strong)"
-        strokeWidth="1.5"
-      />
-      <rect
-        x="101.5"
-        y="26.5"
-        width="28"
-        height="51.5"
-        rx="4"
-        stroke="var(--border-strong)"
-        strokeWidth="1.5"
-      />
-      <circle cx="34" cy="21" r="4.5" fill="var(--accent)" />
-    </svg>
+      </Card>
+    </PageContainer>
   );
 }

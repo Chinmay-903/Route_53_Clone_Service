@@ -1,10 +1,10 @@
 'use client';
 
-import Box from '@cloudscape-design/components/box';
-import Button from '@cloudscape-design/components/button';
-import Modal from '@cloudscape-design/components/modal';
-import SpaceBetween from '@cloudscape-design/components/space-between';
+import { Trash2 } from 'lucide-react';
 
+import { RecordTypeBadge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
 import type { RecordSetResponse } from '@/lib/api/types.gen';
 import { useDeleteRecord } from '@/lib/queries/records';
 
@@ -29,40 +29,54 @@ export function DeleteRecordModal({
       onDeleted();
       onClose();
     } catch {
-      // Reported in a Flashbar; the modal stays open so the reason is readable.
+      // Reported in a toast; the modal stays open so the reason is readable.
     }
   }
 
   return (
     <Modal
-      visible={record !== null}
-      onDismiss={onClose}
-      header="Delete record"
-      closeAriaLabel="Close"
+      open={record !== null}
+      onClose={onClose}
+      busy={mutation.isPending}
+      tone="danger"
+      icon={<Trash2 />}
+      title="Delete record"
+      description="You cannot undo this action."
+      size="sm"
       footer={
-        <Box float="right">
-          <SpaceBetween direction="horizontal" size="xs">
-            <Button variant="link" onClick={onClose} disabled={mutation.isPending}>
-              Cancel
-            </Button>
-            <Button variant="primary" onClick={handleDelete} loading={mutation.isPending}>
-              Delete
-            </Button>
-          </SpaceBetween>
-        </Box>
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={mutation.isPending}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={handleDelete} loading={mutation.isPending}>
+            Delete record
+          </Button>
+        </>
       }
     >
-      <SpaceBetween size="s">
-        <Box variant="span">
-          Permanently delete the <Box variant="strong">{record?.type}</Box> record{' '}
-          <Box variant="strong">{record?.name}</Box>? You cannot undo this action.
-        </Box>
-        {record && record.values.length > 0 && (
-          <Box variant="code" fontSize="body-s" color="text-status-inactive">
-            {record.values.join('\n')}
-          </Box>
-        )}
-      </SpaceBetween>
+      {record && (
+        <div className="rounded-lg border border-line bg-surface-sunken p-3">
+          <div className="flex items-center gap-2">
+            <RecordTypeBadge type={record.type} />
+            <code className="min-w-0 truncate font-mono text-sm font-medium text-ink">
+              {record.name}
+            </code>
+          </div>
+
+          {record.values.length > 0 && (
+            <ul className="mt-2.5 flex flex-col gap-0.5 border-t border-line pt-2.5">
+              {record.values.map((value, index) => (
+                <li
+                  key={`${value}-${index}`}
+                  className="truncate font-mono text-xs text-ink-muted"
+                >
+                  {value}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </Modal>
   );
 }

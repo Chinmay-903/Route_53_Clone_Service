@@ -1,15 +1,20 @@
 import type { Metadata, Viewport } from 'next';
+import { headers } from 'next/headers';
 
-// Cloudscape's global stylesheet must be imported exactly once, and Next.js
-// only permits importing global CSS from node_modules in the root layout.
-import '@cloudscape-design/global-styles/index.css';
 import './globals.css';
 
-import { displayFont } from '@/app/fonts';
+import { mono, sans } from '@/app/fonts';
+import { THEME_SCRIPT } from '@/lib/theme';
 import { Providers } from '@/providers';
 
 export const metadata: Metadata = {
-  title: 'Route 53 Console Clone',
+  title: {
+    default: 'Route 53 Console',
+    // Pages set only their own name; this supplies the product half, so the
+    // browser tab reads "Hosted zones · Route 53 Console" without every page
+    // repeating the suffix.
+    template: '%s · Route 53 Console',
+  },
   description:
     'An educational clone of the AWS Route 53 console for managing hosted zones and DNS records. Not affiliated with Amazon Web Services.',
   robots: { index: false, follow: false },
@@ -37,12 +42,43 @@ export const viewport: Viewport = {
   // affordance, and disabling it to stop iOS input zoom would be the wrong
   // trade. Inputs are sized at 16px instead, which prevents the zoom anyway.
   viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f6f7fa' },
+    { media: '(prefers-color-scheme: dark)', color: '#08090f' },
+  ],
 };
 
-/** Root layout: fonts, global styles, and the client-side providers. */
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+/** Root layout: fonts, global styles, the theme script, and client providers. */
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // The same nonce the middleware put on the CSP header. The inline theme
+  // script below needs it to survive `script-src 'nonce-…' 'strict-dynamic'`;
+  // without it the script is blocked and dark mode flashes white on every load.
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
+
   return (
-    <html lang="en" className={displayFont.variable}>
+    <html
+      lang="en"
+      className={`${sans.variable} ${mono.variable}`}
+      // The theme script below mutates this element's class and style before
+      // React hydrates, which React would otherwise report as a mismatch.
+      suppressHydrationWarning
+    >
+      <head>
+        {/*
+          React does not serialise `nonce` to the client — it is deliberately
+          omitted from the hydration payload so a nonce cannot be read back out
+          of the DOM by injected script. The attribute is therefore present in
+          the server HTML and absent on the client, which React itself then
+          reports as a mismatch. Suppressing it here is the documented answer;
+          the alternative is dropping the nonce, which would let the CSP block
+          the script and bring the dark-mode flash back.
+        */}
+        <script
+          nonce={nonce}
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }}
+        />
+      </head>
       {/*
         Browser extensions — Grammarly and password managers among them — add
         their own attributes to <body> before React hydrates, which React then
@@ -51,7 +87,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         This suppression applies to this element's own attributes and one level
         of text only, so a genuine mismatch anywhere inside still surfaces.
       */}
-      <body suppressHydrationWarning>
+      <body className="antialiased" suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>
     </html>

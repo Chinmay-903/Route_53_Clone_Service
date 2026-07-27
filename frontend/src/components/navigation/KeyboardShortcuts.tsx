@@ -1,10 +1,10 @@
 'use client';
 
-import Box from '@cloudscape-design/components/box';
-import ColumnLayout from '@cloudscape-design/components/column-layout';
-import Modal from '@cloudscape-design/components/modal';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
+
+import { Kbd } from '@/components/ui/Menu';
+import { Modal } from '@/components/ui/Modal';
 
 /**
  * Console-wide keyboard shortcuts.
@@ -16,31 +16,33 @@ import { useCallback, useEffect, useState } from 'react';
  */
 
 interface Shortcut {
-  keys: string;
+  keys: string[];
   description: string;
 }
 
 export const SHORTCUTS: { group: string; items: Shortcut[] }[] = [
   {
-    group: 'Navigation',
+    group: 'General',
     items: [
-      { keys: 'g then d', description: 'Go to dashboard' },
-      { keys: 'g then h', description: 'Go to hosted zones' },
-      { keys: 'g then c', description: 'Create a hosted zone' },
+      { keys: ['⌘', 'K'], description: 'Open the command palette' },
+      { keys: ['/'], description: "Focus this page's filter" },
+      { keys: ['?'], description: 'Show this list' },
+      { keys: ['Esc'], description: 'Close a dialog or clear focus' },
     ],
   },
   {
-    group: 'On this page',
+    group: 'Navigation',
     items: [
-      { keys: '/', description: "Focus this page's filter" },
-      { keys: 'Escape', description: 'Close a dialog or clear focus' },
+      { keys: ['g', 'd'], description: 'Go to dashboard' },
+      { keys: ['g', 'h'], description: 'Go to hosted zones' },
+      { keys: ['g', 'c'], description: 'Create a hosted zone' },
     ],
   },
   {
     group: 'Appearance',
     items: [
-      { keys: 'Shift + D', description: 'Toggle dark mode' },
-      { keys: '?', description: 'Show this list' },
+      { keys: ['⇧', 'D'], description: 'Toggle dark mode' },
+      { keys: ['['], description: 'Collapse or expand the sidebar' },
     ],
   },
 ];
@@ -52,16 +54,27 @@ function isTypingTarget(target: EventTarget | null): boolean {
   return ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
 }
 
-export function KeyboardShortcuts({ onToggleTheme }: { onToggleTheme: () => void }) {
+export function KeyboardShortcuts({
+  open,
+  onOpenChange,
+  onToggleTheme,
+  onOpenPalette,
+  onToggleSidebar,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onToggleTheme: () => void;
+  onOpenPalette: () => void;
+  onToggleSidebar: () => void;
+}) {
   const router = useRouter();
-  const [helpOpen, setHelpOpen] = useState(false);
   const [pendingPrefix, setPendingPrefix] = useState<string | null>(null);
 
   const focusSearch = useCallback(() => {
-    // The page's own filter first, the top bar's service search only as a
-    // fallback. On a table page the filter is what "/" is wanted for, and it
-    // sits later in the DOM than the nav search — so document order would pick
-    // the wrong one.
+    // The page's own filter first, the top bar's control only as a fallback. On
+    // a table page the filter is what "/" is wanted for, and it sits later in
+    // the DOM than the shell's own search — so document order would pick the
+    // wrong one.
     const search =
       document.querySelector<HTMLInputElement>('#console-content input[type="search"]') ??
       document.querySelector<HTMLInputElement>('input[type="search"]');
@@ -70,6 +83,15 @@ export function KeyboardShortcuts({ onToggleTheme }: { onToggleTheme: () => void
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
+      // ⌘K and Ctrl+K are the one modifier combination the console claims, and
+      // it is checked before the typing guard so the palette opens even while
+      // the cursor is in a filter box.
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        onOpenPalette();
+        return;
+      }
+
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (isTypingTarget(event.target)) return;
 
@@ -92,12 +114,17 @@ export function KeyboardShortcuts({ onToggleTheme }: { onToggleTheme: () => void
       }
       if (event.key === '?') {
         event.preventDefault();
-        setHelpOpen(true);
+        onOpenChange(true);
         return;
       }
       if (event.key === '/') {
         event.preventDefault();
         focusSearch();
+        return;
+      }
+      if (event.key === '[') {
+        event.preventDefault();
+        onToggleSidebar();
         return;
       }
       if (event.key === 'D' && event.shiftKey) {
@@ -108,7 +135,7 @@ export function KeyboardShortcuts({ onToggleTheme }: { onToggleTheme: () => void
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [pendingPrefix, router, focusSearch, onToggleTheme]);
+  }, [pendingPrefix, router, focusSearch, onToggleTheme, onOpenPalette, onOpenChange, onToggleSidebar]);
 
   // A half-finished sequence expires, so a stray "g" does not silently arm the
   // next keystroke minutes later.
@@ -120,52 +147,36 @@ export function KeyboardShortcuts({ onToggleTheme }: { onToggleTheme: () => void
 
   return (
     <Modal
-      visible={helpOpen}
-      onDismiss={() => setHelpOpen(false)}
-      header="Keyboard shortcuts"
-      closeAriaLabel="Close"
-      size="medium"
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title="Keyboard shortcuts"
+      description="Every shortcut works from anywhere in the console."
+      size="lg"
     >
-      <ColumnLayout columns={2} variant="text-grid">
+      <div className="grid gap-6 sm:grid-cols-2">
         {SHORTCUTS.map((section) => (
-          <div key={section.group}>
-            <Box variant="awsui-key-label">{section.group}</Box>
-            <dl style={{ margin: 0, display: 'grid', gap: 'var(--space-xs)' }}>
+          <section key={section.group}>
+            <h3 className="mb-2.5 text-2xs font-semibold uppercase tracking-wider text-ink-faint">
+              {section.group}
+            </h3>
+            <dl className="flex flex-col gap-1">
               {section.items.map((shortcut) => (
                 <div
-                  key={shortcut.keys}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    gap: 'var(--space-m)',
-                    alignItems: 'baseline',
-                  }}
+                  key={shortcut.description}
+                  className="flex items-center justify-between gap-4 rounded-lg px-2 py-1.5 transition-colors hover:bg-surface-inset"
                 >
-                  <dd style={{ margin: 0, color: 'var(--text-muted)' }}>
-                    {shortcut.description}
+                  <dt className="text-base text-ink-secondary">{shortcut.description}</dt>
+                  <dd className="flex shrink-0 items-center gap-1">
+                    {shortcut.keys.map((key) => (
+                      <Kbd key={key}>{key}</Kbd>
+                    ))}
                   </dd>
-                  <dt style={{ margin: 0 }}>
-                    <kbd
-                      style={{
-                        padding: '2px 6px',
-                        borderRadius: 'var(--radius-s)',
-                        border: '1px solid var(--border-subtle)',
-                        background: 'var(--surface-inset)',
-                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                        fontSize: 'var(--text-caption)',
-                        color: 'var(--text-strong)',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {shortcut.keys}
-                    </kbd>
-                  </dt>
                 </div>
               ))}
             </dl>
-          </div>
+          </section>
         ))}
-      </ColumnLayout>
+      </div>
     </Modal>
   );
 }

@@ -1,19 +1,20 @@
 import type { NextConfig } from 'next';
 
-/**
- * Next.js configuration.
- *
- * Cloudscape ships untranspiled ES modules, so Next must compile them itself;
- * without `transpilePackages` the build fails on their `import` syntax.
- */
+/** Next.js configuration. */
 const nextConfig: NextConfig = {
   // Pins the trace root to this package. Without it Next walks up and finds an
   // unrelated lockfile in the home directory, then warns about the ambiguity.
   outputFileTracingRoot: __dirname,
-  transpilePackages: [
-    '@cloudscape-design/components',
-    '@cloudscape-design/component-toolkit',
-  ],
+
+  experimental: {
+    /*
+     * Rewrites `import { X } from 'lucide-react'` into a direct path import per
+     * icon. The package's barrel file re-exports well over a thousand
+     * components, and without this the development server compiles every one of
+     * them on any page that uses a single icon.
+     */
+    optimizePackageImports: ['lucide-react'],
+  },
   /**
    * Proxies the API through this origin.
    *

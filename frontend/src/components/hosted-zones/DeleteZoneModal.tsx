@@ -1,11 +1,9 @@
 'use client';
 
-import Alert from '@cloudscape-design/components/alert';
-import Box from '@cloudscape-design/components/box';
-import Button from '@cloudscape-design/components/button';
-import Modal from '@cloudscape-design/components/modal';
-import SpaceBetween from '@cloudscape-design/components/space-between';
+import { Info, Trash2 } from 'lucide-react';
 
+import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
 import type { HostedZoneResponse } from '@/lib/api/types.gen';
 import { useDeleteHostedZone } from '@/lib/queries/hosted-zones';
 
@@ -34,40 +32,44 @@ export function DeleteZoneModal({
       onDeleted();
       onClose();
     } catch {
-      // The mutation's onError already surfaced the reason in a Flashbar. The
+      // The mutation's onError already surfaced the reason in a toast. The
       // modal stays open so the user can read it and decide what to do.
     }
   }
 
   return (
     <Modal
-      visible={zone !== null}
-      onDismiss={onClose}
-      header="Delete hosted zone"
-      closeAriaLabel="Close"
+      open={zone !== null}
+      onClose={onClose}
+      busy={mutation.isPending}
+      tone="danger"
+      icon={<Trash2 />}
+      title="Delete hosted zone"
+      size="sm"
       footer={
-        <Box float="right">
-          <SpaceBetween direction="horizontal" size="xs">
-            <Button variant="link" onClick={onClose} disabled={mutation.isPending}>
-              Cancel
-            </Button>
-            <Button variant="primary" onClick={handleDelete} loading={mutation.isPending}>
-              Delete
-            </Button>
-          </SpaceBetween>
-        </Box>
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={mutation.isPending}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={handleDelete} loading={mutation.isPending}>
+            Delete zone
+          </Button>
+        </>
       }
     >
-      <SpaceBetween size="m">
-        <Box variant="span">
-          Permanently delete <Box variant="strong">{zone?.name}</Box>? You cannot undo this
-          action.
-        </Box>
-        <Alert type="info">
+      <p className="text-base leading-relaxed text-ink-secondary">
+        Permanently delete{' '}
+        <strong className="font-semibold text-ink">{zone?.name}</strong>? You cannot undo
+        this action.
+      </p>
+
+      <div className="mt-4 flex gap-2.5 rounded-lg border border-info-border bg-info-wash p-3">
+        <Info className="mt-px size-4 shrink-0 text-info" aria-hidden="true" />
+        <p className="text-sm leading-relaxed text-ink-secondary">
           A zone can only be deleted once its records are gone. Its generated SOA and NS
           records are removed with it.
-        </Alert>
-      </SpaceBetween>
+        </p>
+      </div>
     </Modal>
   );
 }

@@ -61,9 +61,11 @@ function buildCsp(nonce: string): string {
 
   return [
     "default-src 'self'",
-    // Cloudscape injects component styles at runtime through the CSSOM, so a
-    // strict style-src would break every control it renders. Scripts stay
-    // nonce-restricted, which is where the XSS risk actually lives.
+    // Framer Motion writes animated values to inline `style` attributes on
+    // every frame, and `style-src` governs those as well as <style> blocks —
+    // so a strict policy here would freeze every transition in the console.
+    // Scripts stay nonce-restricted, which is where the XSS risk actually
+    // lives; an injected style cannot execute.
     "style-src 'self' 'unsafe-inline'",
     // 'strict-dynamic' lets the nonced bootstrap load the chunks it needs
     // without listing each one. Dev additionally needs eval for hot reloading,

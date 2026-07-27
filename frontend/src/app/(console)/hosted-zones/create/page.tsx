@@ -1,58 +1,55 @@
 'use client';
 
-import Box from '@cloudscape-design/components/box';
-import Button from '@cloudscape-design/components/button';
-import Container from '@cloudscape-design/components/container';
-import ContentLayout from '@cloudscape-design/components/content-layout';
-import Form from '@cloudscape-design/components/form';
-import FormField from '@cloudscape-design/components/form-field';
-import Header from '@cloudscape-design/components/header';
-import Input from '@cloudscape-design/components/input';
-import RadioGroup from '@cloudscape-design/components/radio-group';
-import SpaceBetween from '@cloudscape-design/components/space-between';
-import BreadcrumbGroup from '@cloudscape-design/components/breadcrumb-group';
-import HelpPanel from '@cloudscape-design/components/help-panel';
-import Link from '@cloudscape-design/components/link';
+import { Globe, Lock, Plus, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import { useHelpPanel } from '@/components/shell/HelpPanelContext';
+import { InfoButton, useHelpPanel } from '@/components/layout/HelpPanel';
+import { PageContainer, PageHeader } from '@/components/layout/PageHeader';
+import { Button } from '@/components/ui/Button';
+import { Card, CardBody, CardFooter, CardHeader } from '@/components/ui/Card';
+import { Counter, Field, Input } from '@/components/ui/Input';
+import { RadioCards } from '@/components/ui/Select';
 import { useCreateHostedZone } from '@/lib/queries/hosted-zones';
 
+const COMMENT_MAX = 256;
+
 /**
- * Explanatory copy for the shell's Info panel.
+ * Explanatory copy for the shell's Info drawer.
  *
  * Written here in plain language rather than lifted from AWS documentation —
  * reproducing their prose would be copying a protected asset, and a shorter
  * explanation serves the reader better anyway.
  */
 const HELP_CONTENT = (
-  <HelpPanel header={<h2>Hosted zones</h2>}>
+  <>
     <p>
-      A hosted zone is a container for the DNS records that decide how traffic
-      for one domain is routed. Its name is the domain it answers for.
+      A hosted zone is a container for the DNS records that decide how traffic for one
+      domain is routed. Its name is the domain it answers for.
     </p>
+
     <h3>Public or private</h3>
     <p>
-      A <strong>public</strong> zone answers queries from anywhere on the
-      internet. A <strong>private</strong> zone answers only from inside networks
-      you associate with it — useful for internal service names that should not
-      resolve publicly.
+      A <strong>public</strong> zone answers queries from anywhere on the internet. A{' '}
+      <strong>private</strong> zone answers only from inside networks you associate with
+      it — useful for internal service names that should not resolve publicly.
     </p>
+
     <h3>What gets created with it</h3>
     <p>
-      Every zone is created with two records that cannot be edited or deleted:
-      an <strong>NS</strong> record naming the four servers responsible for the
-      zone, and an <strong>SOA</strong> record holding its serial number and
-      cache timers. Removing either would leave the zone unresolvable.
+      Every zone is created with two records that cannot be edited or deleted: an{' '}
+      <strong>NS</strong> record naming the four servers responsible for the zone, and an{' '}
+      <strong>SOA</strong> record holding its serial number and cache timers. Removing
+      either would leave the zone unresolvable.
     </p>
+
     <h3>Naming</h3>
     <p>
       Enter the domain without a protocol — <code>example.com</code>, not{' '}
-      <code>https://example.com</code>. Subdomains are managed as records inside
-      the zone rather than as zones of their own.
+      <code>https://example.com</code>. Subdomains are managed as records inside the zone
+      rather than as zones of their own.
     </p>
-  </HelpPanel>
+  </>
 );
 
 /** The create hosted zone form. */
@@ -64,7 +61,7 @@ export default function CreateHostedZonePage() {
   // Registers this page's help copy with the shell and clears it on the way
   // out, so a later page does not inherit an Info button explaining zones.
   useEffect(() => {
-    helpPanel.setContent(HELP_CONTENT);
+    helpPanel.setContent(HELP_CONTENT, 'Hosted zones');
     return () => helpPanel.setContent(null);
     // setContent is stable for the provider's lifetime; re-running on every
     // render would clear the panel it had just set.
@@ -102,114 +99,131 @@ export default function CreateHostedZonePage() {
       });
       router.push(`/hosted-zones/${zone.id}`);
     } catch {
-      // The mutation reported the reason in a Flashbar; the form stays filled
-      // so the user can correct it rather than retype everything.
+      // The mutation reported the reason in a toast; the form stays filled so
+      // the user can correct it rather than retype everything.
     }
   }
 
   return (
-    <ContentLayout
-      breadcrumbs={
-        <BreadcrumbGroup
-          items={[
-            { text: 'Hosted zones', href: '/hosted-zones' },
-            { text: 'Create hosted zone', href: '#' },
-          ]}
-          onFollow={(event) => {
-            event.preventDefault();
-            if (event.detail.href !== '#') router.push(event.detail.href);
-          }}
-        />
-      }
-      header={
-        <Header
-          variant="h1"
-          description="A hosted zone tells Route 53 how to respond to DNS queries for a domain."
-          info={
-            <Link variant="info" onFollow={() => helpPanel.setOpen(true)}>
-              Info
-            </Link>
-          }
-        >
-          Create hosted zone
-        </Header>
-      }
-    >
-      <form onSubmit={handleSubmit}>
-        <Form
-          actions={
-            <SpaceBetween direction="horizontal" size="xs">
-              <Button variant="link" onClick={() => router.push('/hosted-zones')}>
-                Cancel
-              </Button>
-              <Button variant="primary" formAction="submit" loading={mutation.isPending}>
-                Create hosted zone
-              </Button>
-            </SpaceBetween>
-          }
-        >
-          <SpaceBetween size="l">
-            <Container header={<Header variant="h2">Hosted zone configuration</Header>}>
-              <SpaceBetween size="l">
-                <FormField
-                  label="Domain name"
-                  description="The domain this zone answers for. Subdomains are managed as records inside it."
-                  constraintText="For example, example.com. Letters, digits, and hyphens only."
-                  errorText={nameError}
-                >
-                  <Input
-                    value={name}
-                    onChange={({ detail }) => setName(detail.value)}
-                    onBlur={validateName}
-                    placeholder="example.com"
-                    autoFocus
-                  />
-                </FormField>
+    <PageContainer>
+      <PageHeader
+        title="Create hosted zone"
+        icon={<Plus />}
+        description="A hosted zone tells Route 53 how to respond to DNS queries for a domain."
+        actions={<InfoButton />}
+      />
 
-                <FormField
-                  label={
-                    <span>
-                      Description <Box variant="span" color="text-status-inactive">– optional</Box>
-                    </span>
-                  }
-                  description="A note for whoever looks at this zone next."
-                  constraintText="Up to 256 characters."
-                >
-                  <Input
-                    value={comment}
-                    onChange={({ detail }) => setComment(detail.value)}
-                    placeholder="Primary marketing domain"
-                  />
-                </FormField>
+      {/* Capped narrower than the page: a form field stretched to 1440px is
+          harder to scan, not easier, because the label and the input drift
+          apart. */}
+      <form onSubmit={handleSubmit} noValidate className="max-w-3xl">
+        <Card>
+          <CardHeader
+            title="Hosted zone configuration"
+            description="Two of these can be changed later; the domain name cannot."
+          />
 
-                <FormField
-                  label="Type"
-                  description="Whether this zone answers queries from the public internet or only from inside a private network."
-                >
-                  <RadioGroup
-                    value={type}
-                    onChange={({ detail }) => setType(detail.value as 'Public' | 'Private')}
-                    items={[
-                      {
-                        value: 'Public',
-                        label: 'Public hosted zone',
-                        description: 'Answers queries from anyone on the internet.',
-                      },
-                      {
-                        value: 'Private',
-                        label: 'Private hosted zone',
-                        description:
-                          'Answers queries only from inside associated networks. Modelled here, not enforced.',
-                      },
-                    ]}
-                  />
-                </FormField>
-              </SpaceBetween>
-            </Container>
+          <CardBody className="flex flex-col gap-6">
+            <Field
+              label="Domain name"
+              description="The domain this zone answers for. Subdomains are managed as records inside it."
+              error={nameError}
+              constraint="For example, example.com. Letters, digits, and hyphens only."
+            >
+              {(field) => (
+                <Input
+                  {...field}
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  onBlur={validateName}
+                  placeholder="example.com"
+                  leading={<Globe />}
+                  disabled={mutation.isPending}
+                  autoComplete="off"
+                  spellCheck={false}
+                  autoFocus
+                />
+              )}
+            </Field>
 
-          </SpaceBetween>
-        </Form>
+            <Field
+              label="Description"
+              optional
+              description="A note for whoever looks at this zone next."
+            >
+              {(field) => (
+                <Input
+                  {...field}
+                  value={comment}
+                  onChange={(event) => setComment(event.target.value)}
+                  placeholder="Primary marketing domain"
+                  maxLength={COMMENT_MAX}
+                  disabled={mutation.isPending}
+                  trailing={<Counter value={comment.length} max={COMMENT_MAX} />}
+                />
+              )}
+            </Field>
+
+            <Field
+              label="Type"
+              description="Whether this zone answers queries from the public internet or only from inside a private network."
+            >
+              {() => (
+                <RadioCards
+                  name="Hosted zone type"
+                  value={type}
+                  onValueChange={setType}
+                  options={[
+                    {
+                      value: 'Public',
+                      label: 'Public hosted zone',
+                      description: 'Answers queries from anyone on the internet.',
+                      icon: <Globe />,
+                    },
+                    {
+                      value: 'Private',
+                      label: 'Private hosted zone',
+                      description:
+                        'Answers only from inside associated networks. Modelled here, not enforced.',
+                      icon: <Lock />,
+                    },
+                  ]}
+                />
+              )}
+            </Field>
+
+            {/*
+              States what creating the zone will actually do. The two generated
+              records surprise people who have not used Route 53 before, and a
+              record count that jumps to two on a brand new zone looks like a
+              bug unless it was announced.
+            */}
+            <div className="flex gap-2.5 rounded-lg border border-line bg-surface-sunken p-3">
+              <Sparkles className="mt-px size-4 shrink-0 text-brand" aria-hidden="true" />
+              <p className="text-sm leading-relaxed text-ink-muted">
+                Creating this zone also generates an <strong className="font-medium text-ink">SOA</strong>{' '}
+                record and an <strong className="font-medium text-ink">NS</strong> record listing
+                four name servers. Both are read-only.
+              </p>
+            </div>
+          </CardBody>
+
+          <CardFooter>
+            <Button
+              variant="ghost"
+              type="button"
+              onClick={() => router.push('/hosted-zones')}
+              disabled={mutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit" loading={mutation.isPending}>
+              <Plus aria-hidden="true" />
+              Create hosted zone
+            </Button>
+          </CardFooter>
+        </Card>
       </form>
-    </ContentLayout>
+    </PageContainer>
   );
 }

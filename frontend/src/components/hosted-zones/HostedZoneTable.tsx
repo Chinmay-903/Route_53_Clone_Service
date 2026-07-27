@@ -1,23 +1,31 @@
 'use client';
 
-import Box from '@cloudscape-design/components/box';
-import Button from '@cloudscape-design/components/button';
-import ButtonDropdown from '@cloudscape-design/components/button-dropdown';
-import CollectionPreferences from '@cloudscape-design/components/collection-preferences';
-import Header from '@cloudscape-design/components/header';
-import Link from '@cloudscape-design/components/link';
-import Pagination from '@cloudscape-design/components/pagination';
-import SpaceBetween from '@cloudscape-design/components/space-between';
-import Table from '@cloudscape-design/components/table';
-import TextFilter from '@cloudscape-design/components/text-filter';
+import {
+  Eye,
+  Globe,
+  ListTree,
+  Lock,
+  Pencil,
+  Plus,
+  Trash2,
+} from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { StatCard } from '@/components/cards/StatCard';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import { DeleteZoneModal } from '@/components/hosted-zones/DeleteZoneModal';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { ErrorState } from '@/components/ui/ErrorState';
+import { PageContainer, PageHeader } from '@/components/layout/PageHeader';
+import { DataTable, type Column } from '@/components/tables/DataTable';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { SearchInput } from '@/components/ui/SearchInput';
+import { SegmentedControl } from '@/components/ui/Tabs';
 import type { HostedZoneResponse } from '@/lib/api/types.gen';
+import { cn } from '@/lib/cn';
 import { useHostedZones } from '@/lib/queries/hosted-zones';
+import { useHostedZoneStats } from '@/lib/queries/zone-stats';
 import { useIsCompact, useIsPhone } from '@/lib/useMediaQuery';
 import { useTableState } from '@/lib/useTableState';
 
@@ -40,10 +48,13 @@ const TABLET_COLUMNS = ['name', 'type', 'record_count', 'id'];
 export function HostedZoneTable() {
   const router = useRouter();
   const state = useTableState({ defaultSort: 'name' });
+  const stats = useHostedZoneStats();
   const isPhone = useIsPhone();
   const isCompact = useIsCompact();
+
   const [selected, setSelected] = useState<HostedZoneResponse[]>([]);
   const [deleting, setDeleting] = useState<HostedZoneResponse | null>(null);
+  const [typeFilter, setTypeFilter] = useState<'all' | 'Public' | 'Private'>('all');
 
   const query = useHostedZones({
     search: state.search || undefined,
@@ -53,9 +64,16 @@ export function HostedZoneTable() {
     offset: (state.page - 1) * state.pageSize,
   });
 
-  const zones = query.data?.items ?? [];
+  const allZones = query.data?.items ?? [];
   const total = query.data?.total ?? 0;
-  const selectedZone = selected[0];
+
+  // The API has no type parameter, so this filter is applied to the page the
+  // server returned rather than to the whole collection. It is offered anyway
+  // because it is genuinely useful on a page of results, but the count beneath
+  // the search box keeps reporting the server's total so the two never appear
+  // to contradict each other.
+  const zones =
+    typeFilter === 'all' ? allZones : allZones.filter((zone) => zone.type === typeFilter);
 
   // Narrow the chosen columns rather than replacing them, so a column the user
   // switched off stays off when the viewport grows again.
@@ -65,197 +83,175 @@ export function HostedZoneTable() {
       ? state.visibleColumns.filter((column) => TABLET_COLUMNS.includes(column))
       : state.visibleColumns;
 
+  const columns: Column<HostedZoneResponse>[] = [
+    {
+      id: 'name',
+      header: 'Hosted zone name',
+      sortable: true,
+      isRowHeader: true,
+      alwaysVisible: true,
+      cell: (zone) => (
+        <Link
+          href={`/hosted-zones/${zone.id}`}
+          className={cn(
+            'group/link inline-flex items-center gap-2 rounded font-medium text-ink',
+            'transition-colors hover:text-brand',
+          )}
+        >
+          <span
+            className="flex size-6 shrink-0 items-center justify-center rounded-md border border-line bg-surface-inset text-ink-faint transition-colors group-hover/link:border-line-accent group-hover/link:bg-brand-wash group-hover/link:text-brand"
+            aria-hidden="true"
+          >
+            {zone.type === 'Private' ? (
+              <Lock className="size-3" />
+            ) : (
+              <Globe className="size-3" />
+            )}
+          </span>
+          <span className="truncate">{zone.name}</span>
+        </Link>
+      ),
+    },
+    {
+      id: 'type',
+      header: 'Type',
+      sortable: true,
+      shrink: true,
+      cell: (zone) => (
+        <Badge tone={zone.type === 'Private' ? 'warning' : 'info'} size="sm">
+          {zone.type}
+        </Badge>
+      ),
+    },
+    {
+      id: 'created_by',
+      header: 'Created by',
+      cell: (zone) => <span className="text-ink-muted">{zone.created_by}</span>,
+    },
+    {
+      id: 'record_count',
+      header: 'Records',
+      sortable: true,
+      align: 'right',
+      shrink: true,
+      cell: (zone) => <span className="font-medium text-ink">{zone.record_count}</span>,
+    },
+    {
+      id: 'comment',
+      header: 'Description',
+      cell: (zone) =>
+        zone.comment ? (
+          <span className="line-clamp-1 text-ink-muted" title={zone.comment}>
+            {zone.comment}
+          </span>
+        ) : (
+          <Dash />
+        ),
+    },
+    {
+      id: 'id',
+      header: 'Hosted zone ID',
+      shrink: true,
+      cell: (zone) => (
+        <code className="rounded border border-line bg-surface-inset px-1.5 py-0.5 text-xs text-ink-muted">
+          {zone.id}
+        </code>
+      ),
+    },
+  ];
+
+  const hasFilters = Boolean(state.search) || typeFilter !== 'all';
+
   return (
-    <>
-      <Table<HostedZoneResponse>
-        items={zones}
-        // Cloudscape reserves the table's height while loading, so rows do not
-        // shift into place when the request settles.
-        loading={query.isLoading}
-        loadingText="Loading hosted zones"
-        trackBy="id"
-        // Radio selection, matching the console's single-select pattern.
-        selectionType="single"
-        selectedItems={selected}
-        onSelectionChange={({ detail }) => setSelected([...detail.selectedItems])}
-        variant="full-page"
-        stickyHeader
-        resizableColumns
-        columnDefinitions={[
-          {
-            id: 'name',
-            header: 'Hosted zone name',
-            sortingField: 'name',
-            isRowHeader: true,
-            cell: (zone) => (
-              <Link
-                href={`/hosted-zones/${zone.id}`}
-                onFollow={(event) => {
-                  event.preventDefault();
-                  router.push(`/hosted-zones/${zone.id}`);
-                }}
-              >
-                {zone.name}
-              </Link>
-            ),
-          },
-          { id: 'type', header: 'Type', sortingField: 'type', cell: (zone) => zone.type },
-          { id: 'created_by', header: 'Created by', cell: (zone) => zone.created_by },
-          {
-            id: 'record_count',
-            header: 'Record count',
-            sortingField: 'record_count',
-            cell: (zone) => zone.record_count,
-          },
-          {
-            id: 'comment',
-            header: 'Description',
-            cell: (zone) =>
-              zone.comment ?? (
-                <Box color="text-status-inactive" variant="span">
-                  –
-                </Box>
-              ),
-          },
-          {
-            id: 'id',
-            header: 'Hosted zone ID',
-            cell: (zone) => <Box variant="code">{zone.id}</Box>,
-          },
-        ]}
-        visibleColumns={visibleColumns}
-        // Keeps the zone name in view while the rest of a wide row scrolls
-        // sideways, so a horizontal scroll never loses the row's identity.
-        stickyColumns={{ first: isCompact ? 0 : 1 }}
-        sortingColumn={{ sortingField: state.sort }}
-        sortingDescending={state.order === 'desc'}
-        onSortingChange={({ detail }) =>
-          state.setSorting(
-            detail.sortingColumn.sortingField ?? 'name',
-            detail.isDescending ? 'desc' : 'asc',
+    <PageContainer>
+      <PageHeader
+        title="Hosted zones"
+        icon={<Globe />}
+        badge={
+          total > 0 && (
+            <Badge tone="neutral" className="tabular-nums">
+              {total}
+            </Badge>
           )
         }
-        header={
-          <Header
-            variant="awsui-h1-sticky"
-            counter={total ? `(${total})` : undefined}
-            description="A hosted zone holds the DNS records that define how traffic is routed for a domain."
-            actions={
-              <SpaceBetween direction="horizontal" size="xs">
-                {/* Four side-by-side buttons wrap into a ragged stack on a
-                    narrow screen, so the secondary three collapse into one
-                    overflow menu and only the primary action stays visible. */}
-                {isCompact ? (
-                  <ButtonDropdown
-                    disabled={!selectedZone}
-                    ariaLabel="Actions for the selected hosted zone"
-                    items={[
-                      { id: 'view', text: 'View details' },
-                      { id: 'edit', text: 'Edit' },
-                      { id: 'delete', text: 'Delete' },
-                    ]}
-                    onItemClick={({ detail }) => {
-                      if (!selectedZone) return;
-                      if (detail.id === 'delete') setDeleting(selectedZone);
-                      else if (detail.id === 'edit')
-                        router.push(`/hosted-zones/${selectedZone.id}?tab=details`);
-                      else router.push(`/hosted-zones/${selectedZone.id}`);
-                    }}
-                  >
-                    Actions
-                  </ButtonDropdown>
-                ) : (
-                  <>
-                    <Button
-                      disabled={!selectedZone}
-                      onClick={() => router.push(`/hosted-zones/${selectedZone?.id}`)}
-                    >
-                      View details
-                    </Button>
-                    <Button
-                      disabled={!selectedZone}
-                      onClick={() => router.push(`/hosted-zones/${selectedZone?.id}?tab=details`)}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      disabled={!selectedZone}
-                      onClick={() => setDeleting(selectedZone ?? null)}
-                    >
-                      Delete
-                    </Button>
-                  </>
-                )}
-                <Button variant="primary" onClick={() => router.push('/hosted-zones/create')}>
-                  Create hosted zone
-                </Button>
-              </SpaceBetween>
+        description="A hosted zone holds the DNS records that define how traffic is routed for a domain."
+        actions={
+          <Button variant="primary" onClick={() => router.push('/hosted-zones/create')}>
+            <Plus aria-hidden="true" />
+            Create hosted zone
+          </Button>
+        }
+      >
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            label="Hosted zones"
+            value={stats.zoneCount}
+            hint="Across this account"
+            icon={<Globe />}
+            tone="brand"
+            loading={stats.loading}
+          />
+          <StatCard
+            label="Record sets"
+            value={stats.recordCount}
+            hint={
+              stats.truncated
+                ? 'Across the first 100 zones'
+                : 'Including generated SOA and NS'
             }
-          >
-            Hosted zones
-          </Header>
-        }
-        filter={
-          <TextFilter
-            filteringText={state.search}
-            filteringPlaceholder="Find hosted zones"
-            filteringAriaLabel="Filter hosted zones by name"
-            onChange={({ detail }) => state.setSearch(detail.filteringText)}
-            countText={total ? `${total} matches` : ''}
+            icon={<ListTree />}
+            tone="info"
+            loading={stats.loading}
           />
-        }
-        pagination={
-          <Pagination
-            currentPageIndex={state.page}
-            pagesCount={Math.max(1, Math.ceil(total / state.pageSize))}
-            onChange={({ detail }) => state.setPage(detail.currentPageIndex)}
-            ariaLabels={{
-              nextPageLabel: 'Next page',
-              previousPageLabel: 'Previous page',
-              pageLabel: (pageNumber) => `Page ${pageNumber}`,
-            }}
+          <StatCard
+            label="Public zones"
+            value={stats.publicCount}
+            hint="Answer queries from the internet"
+            icon={<Globe />}
+            tone="success"
+            loading={stats.loading}
           />
-        }
-        preferences={
-          <CollectionPreferences
-            title="Preferences"
-            confirmLabel="Confirm"
-            cancelLabel="Cancel"
-            preferences={{
-              pageSize: state.pageSize,
-              contentDisplay: ALL_COLUMNS.map((column) => ({
-                id: column.id,
-                visible: state.visibleColumns.includes(column.id),
-              })),
-            }}
-            pageSizePreference={{
-              title: 'Page size',
-              options: [
-                { value: 10, label: '10 hosted zones' },
-                { value: 20, label: '20 hosted zones' },
-                { value: 50, label: '50 hosted zones' },
-              ],
-            }}
-            contentDisplayPreference={{ title: 'Visible columns', options: ALL_COLUMNS }}
-            onConfirm={({ detail }) => {
-              state.setPageSize(detail.pageSize ?? 10);
-              state.setVisibleColumns(
-                (detail.contentDisplay ?? [])
-                  .filter((column) => column.visible)
-                  .map((column) => column.id),
-              );
-            }}
+          <StatCard
+            label="Private zones"
+            value={stats.privateCount}
+            hint="Answer inside associated networks"
+            icon={<Lock />}
+            tone="warning"
+            loading={stats.loading}
           />
-        }
+        </div>
+      </PageHeader>
+
+      <DataTable<HostedZoneResponse>
+        items={zones}
+        columns={columns}
+        visibleColumns={visibleColumns}
+        getRowId={(zone) => zone.id}
+        ariaLabel="Hosted zones"
+        loading={query.isLoading}
+        error={query.isError ? query.error : undefined}
+        onRetry={() => void query.refetch()}
+        skeletonRows={Math.min(state.pageSize, 8)}
         empty={
-          query.isError ? (
-            <ErrorState error={query.error} onRetry={() => void query.refetch()} />
-          ) : state.search ? (
+          hasFilters ? (
             <EmptyState
               variant="search"
               title="No matches"
-              description={`No hosted zone name contains "${state.search}".`}
-              action={<Button onClick={() => state.setSearch('')}>Clear filter</Button>}
+              description={
+                state.search
+                  ? `No hosted zone name contains “${state.search}”.`
+                  : `No ${typeFilter.toLowerCase()} zone on this page.`
+              }
+              action={
+                <Button
+                  onClick={() => {
+                    state.setSearch('');
+                    setTypeFilter('all');
+                  }}
+                >
+                  Clear filters
+                </Button>
+              }
             />
           ) : (
             <EmptyState
@@ -264,29 +260,99 @@ export function HostedZoneTable() {
               description="Create a hosted zone to start managing DNS records for a domain."
               action={
                 <Button variant="primary" onClick={() => router.push('/hosted-zones/create')}>
+                  <Plus aria-hidden="true" />
                   Create hosted zone
                 </Button>
               }
             />
           )
         }
-        ariaLabels={{
-          selectionGroupLabel: 'Hosted zone selection',
-          itemSelectionLabel: (_data, zone) => `Select ${zone.name}`,
-          tableLabel: 'Hosted zones',
+        sort={state.sort}
+        order={state.order}
+        onSortChange={state.setSorting}
+        selectionMode="single"
+        selected={selected}
+        onSelectionChange={setSelected}
+        getRowLabel={(zone) => `Select ${zone.name}`}
+        onRowActivate={(zone) => router.push(`/hosted-zones/${zone.id}`)}
+        rowActions={() => [
+          { id: 'view', label: 'View details', icon: <Eye /> },
+          { id: 'edit', label: 'Edit description', icon: <Pencil /> },
+          { id: 'delete', label: 'Delete', icon: <Trash2 />, danger: true, separatorBefore: true },
+        ]}
+        onRowAction={(action, zone) => {
+          if (action === 'delete') setDeleting(zone);
+          else if (action === 'edit') router.push(`/hosted-zones/${zone.id}?tab=details`);
+          else router.push(`/hosted-zones/${zone.id}`);
         }}
+        page={state.page}
+        pageSize={state.pageSize}
+        total={total}
+        onPageChange={state.setPage}
+        onPageSizeChange={state.setPageSize}
+        pageSizeOptions={[10, 20, 50]}
+        itemNoun="hosted zones"
+        onVisibleColumnsChange={state.setVisibleColumns}
+        filters={
+          <>
+            <SearchInput
+              value={state.search}
+              onValueChange={state.setSearch}
+              placeholder="Find hosted zones"
+              aria-label="Filter hosted zones by name"
+              countText={state.search && total ? `${total} matches` : undefined}
+              containerClassName="w-full max-w-xs"
+            />
+            {!isPhone && (
+              <SegmentedControl
+                label="Filter by zone type"
+                value={typeFilter}
+                onValueChange={setTypeFilter}
+                options={[
+                  { value: 'all', label: 'All' },
+                  { value: 'Public', label: 'Public' },
+                  { value: 'Private', label: 'Private' },
+                ]}
+                className="mt-0.5"
+              />
+            )}
+          </>
+        }
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              disabled={selected.length !== 1}
+              onClick={() => router.push(`/hosted-zones/${selected[0]?.id}`)}
+            >
+              <Eye aria-hidden="true" />
+              <span className="hidden sm:inline">View details</span>
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={selected.length !== 1}
+              onClick={() => setDeleting(selected[0] ?? null)}
+            >
+              <Trash2 aria-hidden="true" />
+              <span className="hidden sm:inline">Delete</span>
+            </Button>
+          </>
+        }
       />
 
-      <DeleteZoneModal zone={deleting} onClose={() => setDeleting(null)} onDeleted={() => setSelected([])} />
-    </>
+      <DeleteZoneModal
+        zone={deleting}
+        onClose={() => setDeleting(null)}
+        onDeleted={() => setSelected([])}
+      />
+    </PageContainer>
   );
 }
 
-const ALL_COLUMNS = [
-  { id: 'name', label: 'Hosted zone name', alwaysVisible: true },
-  { id: 'type', label: 'Type' },
-  { id: 'created_by', label: 'Created by' },
-  { id: 'record_count', label: 'Record count' },
-  { id: 'comment', label: 'Description' },
-  { id: 'id', label: 'Hosted zone ID' },
-];
+function Dash() {
+  return (
+    <span className="text-ink-faint" aria-label="Not set">
+      –
+    </span>
+  );
+}
