@@ -6,13 +6,28 @@
 
 Next.js · TypeScript · FastAPI · SQLite
 
+### ▶ [**Open the live demo**](https://route-53-clone-service.vercel.app)
+
+| Email | Password |
+|---|---|
+| `demo@route53clone.dev` | `DemoConsole2026` |
+
 <sub>⚠️ Not affiliated with Amazon Web Services. An educational UI/UX clone containing no AWS trademarked assets, performing no DNS resolution.</sub>
 
 </div>
 
+> **First sign-in may take up to a minute.** The API runs on a free tier that
+> stops the container after 15 minutes idle. The console itself loads instantly;
+> only the first request after a quiet spell waits for the server to start. The
+> login screen warms the API as it loads and tells you if the wait runs long — it
+> is starting, not broken. Everything after that is normal speed.
+
+The demo is seeded with three hosted zones spanning every record type, so it is
+never empty. Seeding is idempotent and runs on boot.
+
 ---
 
-## Quick start
+## Running it locally
 
 You need **Python 3.11+** and **Node.js 20+**. Two terminals.
 
@@ -36,21 +51,20 @@ cd frontend && npm install
 cd frontend && npm run dev
 ```
 
-Open **http://localhost:3000** and sign in:
+Create `frontend/.env.local` pointing at the local API — in production this is
+left unset so the console proxies `/api` through its own origin instead:
 
-| Email | Password |
-|---|---|
-| `demo@route53clone.dev` | `DemoConsole2026` |
+```bash
+echo NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 > frontend/.env.local
+```
 
-The database creates and seeds itself on boot — three zones with a spread of record types, so you never land on an empty screen. Seeding is idempotent, so restarting changes nothing.
+Then open **http://localhost:3000** and sign in with the credentials above. The
+database creates and seeds itself on boot.
 
-> **On the hosted demo:** the API runs on a free tier that stops the container
-> after 15 minutes idle. The console itself loads instantly, but the *first*
-> sign-in after a quiet spell waits up to a minute for the server to start. The
-> login screen warms the API as it loads and says so if the wait runs long — it
-> is starting, not broken. Every request after that is normal speed.
-
-> **API docs:** http://localhost:8000/docs · **Health:** http://localhost:8000/healthz
+> **Local API docs:** http://localhost:8000/docs · **Health:** http://localhost:8000/healthz
+>
+> `/docs` is deliberately disabled on the deployed API — interactive docs are a
+> deliverable locally and an information disclosure in production.
 
 ---
 
@@ -289,7 +303,8 @@ Written honestly — what was left out matters as much as what was built.
 <details>
 <summary><b>Not yet done</b></summary>
 
-- **Not yet deployed, but fully configured.** `backend/fly.toml` (with the mandatory volume) and `frontend/vercel.json` are committed, and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) walks through it. Running the commands needs your own Fly and Vercel accounts.
+- **The demo's data resets when the API sleeps.** Render's free tier cannot attach a persistent disk, so the SQLite file is ephemeral. Idempotent boot seeding means the three demo zones always come back, but records you create are lost once the container spins down. `backend/fly.toml` is committed for a durable deployment on a volume; see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+- **First request after 15 minutes idle takes up to a minute.** Free-tier cold start. Mitigated by warming the API from the login screen, not eliminated.
 - **No end-to-end or component tests.** Backend coverage is real (87 tests); Playwright and Vitest are scaffolded but unwritten.
 - **No Alembic migration committed.** The schema builds from SQLAlchemy metadata on first boot. Generate the first migration before any schema edit.
 
