@@ -1,9 +1,12 @@
 'use client';
 
-import Input from '@cloudscape-design/components/input';
+import Autosuggest from '@cloudscape-design/components/autosuggest';
 import TopNavigation from '@cloudscape-design/components/top-navigation';
 import { useQuery } from '@tanstack/react-query';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 
+import { consoleDestinations } from '@/components/shell/navigationItems';
 import { logout, readCurrentUser } from '@/lib/api';
 import { queryKeys } from '@/lib/queries/keys';
 
@@ -52,15 +55,7 @@ export function AppTopNavigation({
         }}
         // Cloudscape collapses this into an icon below its own breakpoint, so
         // the bar stays usable on a tablet without a second implementation.
-        search={
-          <Input
-            type="search"
-            value=""
-            readOnly
-            placeholder="Search services"
-            ariaLabel="Search services — not functional in this build"
-          />
-        }
+        search={<ServiceSearch />}
         utilities={[
           {
             type: 'button',
@@ -109,6 +104,62 @@ export function AppTopNavigation({
         }}
       />
     </div>
+  );
+}
+
+/**
+ * The top bar's service search.
+ *
+ * The real console searches AWS services from here; this searches the console's
+ * own sections and navigates to the one you pick. It was previously a read-only
+ * input that looked interactive and did nothing — a control that invites a
+ * click and then ignores it is worse than no control at all.
+ */
+function ServiceSearch() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [value, setValue] = useState('');
+  const destinations = useMemo(consoleDestinations, []);
+
+  // Cleared on arrival rather than inside the select handler. Cloudscape fires
+  // `onChange` with the chosen label as part of selecting it, which lands after
+  // `onSelect` and would immediately overwrite a clear made there — leaving the
+  // previous section's name sitting in the box.
+  useEffect(() => setValue(''), [pathname]);
+
+  const options = useMemo(
+    () =>
+      destinations.map((destination) => ({
+        value: destination.label,
+        // Shows which section it belongs to, so "Rules" is distinguishable
+        // from the other single-word entries.
+        description: destination.group,
+      })),
+    [destinations],
+  );
+
+  function goTo(label: string) {
+    const match = destinations.find(
+      (destination) => destination.label.toLowerCase() === label.toLowerCase(),
+    );
+    if (!match) return;
+    router.push(match.href);
+  }
+
+  return (
+    <Autosuggest
+      value={value}
+      onChange={({ detail }) => setValue(detail.value)}
+      onSelect={({ detail }) => goTo(detail.value)}
+      options={options}
+      // Cloudscape filters the options itself; enteredTextLabel covers the case
+      // where someone types a section name in full and presses Enter.
+      enteredTextLabel={(entered) => `Go to "${entered}"`}
+      placeholder="Search services"
+      ariaLabel="Search console sections"
+      empty="No matching section"
+      filteringType="auto"
+    />
   );
 }
 

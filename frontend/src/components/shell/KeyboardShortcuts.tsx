@@ -32,7 +32,7 @@ export const SHORTCUTS: { group: string; items: Shortcut[] }[] = [
   {
     group: 'On this page',
     items: [
-      { keys: '/', description: 'Focus the search box' },
+      { keys: '/', description: "Focus this page's filter" },
       { keys: 'Escape', description: 'Close a dialog or clear focus' },
     ],
   },
@@ -58,9 +58,13 @@ export function KeyboardShortcuts({ onToggleTheme }: { onToggleTheme: () => void
   const [pendingPrefix, setPendingPrefix] = useState<string | null>(null);
 
   const focusSearch = useCallback(() => {
-    const search = document.querySelector<HTMLInputElement>(
-      'input[type="search"]:not([readonly])',
-    );
+    // The page's own filter first, the top bar's service search only as a
+    // fallback. On a table page the filter is what "/" is wanted for, and it
+    // sits later in the DOM than the nav search — so document order would pick
+    // the wrong one.
+    const search =
+      document.querySelector<HTMLInputElement>('#console-content input[type="search"]') ??
+      document.querySelector<HTMLInputElement>('input[type="search"]');
     search?.focus();
   }, []);
 
