@@ -32,17 +32,18 @@ services:
       - key: DATABASE_URL
         value: sqlite:////tmp/route53.db
 
-      # The console is served from a different registrable domain, which makes
-      # every API call cross-site. A Lax cookie is not sent on those, so the
-      # session would be dropped immediately after login.
+      # Lax is correct because the console proxies /api through its own origin
+      # (see frontend/next.config.ts), which makes the session cookie
+      # first-party. Setting this to "none" would still work but is weaker.
       - key: COOKIE_SAMESITE
-        value: none
+        value: lax
 
       # Generated once by Render and kept across deploys. Never in this file.
       - key: SESSION_SECRET
         generateValue: true
 
-      # Set these two in the Render dashboard after the first deploy.
+      # Only needed if a browser ever calls the API directly. With the proxy in
+      # place it does not, but the setting is kept for direct API use and tests.
       - key: CORS_ORIGINS
         sync: false
       - key: DEMO_USER_PASSWORD

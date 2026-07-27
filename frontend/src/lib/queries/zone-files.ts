@@ -8,7 +8,8 @@ import { notify } from '@/lib/notifications';
 import { toUserMessage } from '@/lib/queries/client';
 import { queryKeys } from '@/lib/queries/keys';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
+// Empty means same-origin; see the note in api-config.ts.
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
 
 /** Imports a BIND zone file into a hosted zone. */
 export function useImportZoneFile(zoneId: string) {

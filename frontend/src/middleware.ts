@@ -54,7 +54,9 @@ function createNonce(): string {
 }
 
 function buildCsp(nonce: string): string {
-  const apiOrigin = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
+  // Empty in production, where the API is proxied through this origin and
+  // 'self' already covers it. Local development points at the API's own port.
+  const apiOrigin = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
   const isDevelopment = process.env.NODE_ENV === 'development';
 
   return [
@@ -69,7 +71,7 @@ function buildCsp(nonce: string): string {
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDevelopment ? " 'unsafe-eval'" : ''}`,
     "img-src 'self' data:",
     "font-src 'self' data:",
-    `connect-src 'self' ${apiOrigin}${isDevelopment ? ' ws: wss:' : ''}`,
+    `connect-src 'self'${apiOrigin ? ` ${apiOrigin}` : ''}${isDevelopment ? ' ws: wss:' : ''}`,
     "object-src 'none'",
     "base-uri 'none'",
     "form-action 'self'",
@@ -90,6 +92,10 @@ function applySecurityHeaders(response: NextResponse, nonce: string): NextRespon
 }
 
 export const config = {
-  // Static assets and Next's own internals need no gate and no redirect.
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.svg$).*)'],
+  // Excludes static assets, Next's internals, and — importantly — `/api`.
+  //
+  // `/api` is the rewrite that proxies the backend. Without this exclusion the
+  // auth redirect below catches the proxied calls themselves and answers every
+  // one of them with a 307 to /login, so the console can never sign in.
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\.svg$).*)'],
 };

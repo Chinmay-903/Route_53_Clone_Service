@@ -7,7 +7,8 @@ import { useQuery } from '@tanstack/react-query';
 import { logout, readCurrentUser } from '@/lib/api';
 import { queryKeys } from '@/lib/queries/keys';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
+// Empty means same-origin; see the note in api-config.ts.
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
 
 /**
  * The console's top bar.

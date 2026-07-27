@@ -9,7 +9,10 @@ import type { CreateClientConfig } from './api/client.gen';
  */
 export const createClientConfig: CreateClientConfig = (config) => ({
   ...config,
-  baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000',
+  // Empty means same-origin, which is how production runs: the API is
+  // proxied through /api by a Next.js rewrite so the session cookie stays
+  // first-party. Local development sets the variable to the API's own port.
+  baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? '',
   credentials: 'include',
 });
 

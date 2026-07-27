@@ -17,21 +17,25 @@ storage matters more than that.
 
 Both catch people out, and both fail *silently*.
 
-### 1. Cross-site cookies
+### 1. Third-party cookies are blocked
 
 The console lands on `*.vercel.app`; the API on `*.onrender.com` or `*.fly.dev`.
-Those are different registrable domains, which makes every API call
-**cross-site** — and a `SameSite=Lax` cookie is not sent on cross-site requests.
-Login would appear to succeed, and every request after it would return 401.
+Different registrable domains make the session cookie **third-party** — and
+modern browsers block those by default. `SameSite=None; Secure` does *not*
+rescue it: the header is correct, the browser simply discards the cookie. Login
+returns 200 and every request after it is unauthenticated.
 
-`COOKIE_SAMESITE=none` fixes it, and is already set in both `render.yaml` and
-`fly.toml`. `None` requires `Secure`, which `Settings.cookie_secure` turns on
-automatically whenever SameSite is `none`.
+The fix is architectural, not a header. `frontend/next.config.ts` rewrites
+`/api/*` to the backend, so the browser only ever talks to the Vercel origin and
+the cookie is first-party. Set `API_ORIGIN` on Vercel to the backend's URL and
+leave `NEXT_PUBLIC_API_BASE_URL` **unset** in production — the client then uses
+relative URLs.
 
-**Does that weaken CSRF protection?** SameSite was never the control here. The
-double-submit CSRF token in `core/security.py` is, and it is unaffected: a
-cross-origin page still cannot read the `r53_csrf` cookie, so it cannot produce
-the matching `X-CSRF-Token` header.
+This also removes the need for CORS entirely, and lets the cookie stay
+`SameSite=Lax`.
+
+> The middleware matcher must exclude `/api`, or the auth redirect answers the
+> proxied calls themselves with a 307 to `/login`.
 
 ### 2. Ephemeral filesystems
 
@@ -106,20 +110,22 @@ volume's name and region must match `fly.toml`.
 
 1. Import the repository at **[vercel.com/new](https://vercel.com/new)**.
 2. Set **Root Directory** to `frontend`. The build fails without this.
-3. Add one environment variable:
+3. Add **one** environment variable:
 
 | Name | Value |
 |---|---|
-| `NEXT_PUBLIC_API_BASE_URL` | your API's base URL, no trailing slash |
+| `API_ORIGIN` | your API's base URL, no trailing slash |
 
-4. Deploy, then copy the URL Vercel gives you.
-5. Go back and set `CORS_ORIGINS` on the API to that exact URL — including
-   `https://`, without a trailing slash. The API rejects a wildcard at startup,
-   because browsers refuse a wildcard alongside credentials anyway.
+4. Deploy.
 
-> `NEXT_PUBLIC_` is the only prefix that reaches the browser bundle, and this is
-> the only value that belongs there. A session secret carrying that prefix would
-> be published in the JavaScript.
+> Do **not** set `NEXT_PUBLIC_API_BASE_URL` in production. Leaving it unset makes
+> the client use relative URLs, which the `/api` rewrite proxies to `API_ORIGIN`
+> — and that is exactly what keeps the session cookie first-party. Setting it
+> would send the browser straight to the other domain and the cookie would be
+> blocked again.
+>
+> `API_ORIGIN` deliberately has no `NEXT_PUBLIC_` prefix: the rewrite resolves on
+> the server, so the value never needs to reach the browser bundle.
 
 ---
 
@@ -127,9 +133,9 @@ volume's name and region must match `fly.toml`.
 
 Three checks, each proving a different thing was configured correctly.
 
-- [ ] **Sign in, then reload the page.** Still signed in → the cross-site cookie works. Bounced to login → `COOKIE_SAMESITE` did not take.
+- [ ] **Sign in, then reload the page.** Still signed in → the proxy and first-party cookie work. Bounced to login → `API_ORIGIN` is unset, or `NEXT_PUBLIC_API_BASE_URL` is set when it should not be.
 - [ ] **Create a zone, then redeploy.** Still there → durable storage (Fly). Gone, but the three seeded zones are back → expected on Render's free tier.
-- [ ] **Open the browser console.** CORS errors → `CORS_ORIGINS` does not exactly match the Vercel URL.
+- [ ] **Check `/api/v1/auth/me` in the network tab.** It should be a *relative* request to your Vercel origin, not to the API's domain.
 
 Also confirm:
 
