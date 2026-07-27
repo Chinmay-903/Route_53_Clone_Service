@@ -37,9 +37,15 @@ RUN mkdir -p /data && chown appuser:appuser /data
 ENV DATABASE_URL=sqlite:////data/route53.db
 
 USER appuser
+
+# Most platforms assign the port at runtime through $PORT; 8000 is the local
+# default. EXPOSE is documentation only, so it names the default.
+ENV PORT=8000
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"
+    CMD python -c "import os,urllib.request; urllib.request.urlopen(f\"http://127.0.0.1:{os.environ.get('PORT','8000')}/healthz\")"
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Shell form on purpose: the exec form would pass the literal string "$PORT" to
+# uvicorn instead of expanding it.
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}

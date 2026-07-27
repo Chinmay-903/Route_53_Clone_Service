@@ -1,0 +1,49 @@
+# Render deployment for the API — the no-credit-card option.
+#
+# Render's free tier cannot attach a persistent disk, so the SQLite file lives
+# on an ephemeral filesystem and is lost whenever the service redeploys,
+# restarts, or spins down after 15 minutes of inactivity.
+#
+# That is survivable here only because seeding is idempotent and runs on boot:
+# every cold start restores the demo account and its three hosted zones, so a
+# reviewer never lands on an empty console. Records created during a session
+# persist until the next spin-down.
+#
+# For durable storage without a card, point DATABASE_URL at Turso instead —
+# it is libSQL, so the connection string is the only change.
+# See docs/DEPLOYMENT.md.
+
+services:
+  - type: web
+    name: route53-clone-api
+    runtime: docker
+    plan: free
+    region: singapore
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+
+      # Written to the container's own filesystem. Ephemeral on the free plan —
+      # see the note above.
+      - key: DATABASE_URL
+        value: sqlite:////tmp/route53.db
+
+      # The console is served from a different registrable domain, which makes
+      # every API call cross-site. A Lax cookie is not sent on those, so the
+      # session would be dropped immediately after login.
+      - key: COOKIE_SAMESITE
+        value: none
+
+      # Generated once by Render and kept across deploys. Never in this file.
+      - key: SESSION_SECRET
+        generateValue: true
+
+      # Set these two in the Render dashboard after the first deploy.
+      - key: CORS_ORIGINS
+        sync: false
+      - key: DEMO_USER_PASSWORD
+        sync: false
